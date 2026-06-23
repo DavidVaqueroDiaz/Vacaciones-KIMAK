@@ -1,0 +1,1043 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Calendario de Vacaciones</title>
+  <style>
+:root{
+  --azul:#2f3b52;
+  --azul2:#4472c4;
+  --amarillo:#fff2cc;
+  --gris-borde:#d9dee8;
+  --finde:#cfd4dd;
+  --finde-vac:#e8eaef;
+  --festivo:#ffd9b3;
+  --texto:#1f2733;
+  --rojo:#d9534f;
+}
+
+*{box-sizing:border-box;}
+body{
+  margin:0;
+  font-family:"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  color:var(--texto);
+  background:#f4f6fa;
+}
+
+.app-header{
+  background:var(--azul);
+  color:#fff;
+  padding:14px 20px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+}
+.app-header .title{font-size:20px;font-weight:600;}
+.mode-badge{
+  font-size:12px;
+  padding:4px 10px;
+  border-radius:20px;
+  background:#5b6b86;
+}
+.mode-badge.shared{background:#3a7d44;}
+
+.tabs{
+  display:flex;
+  gap:4px;
+  background:#e7ebf2;
+  padding:6px 20px 0;
+  border-bottom:1px solid var(--gris-borde);
+}
+.tab{
+  border:none;
+  background:transparent;
+  padding:10px 18px;
+  font-size:14px;
+  cursor:pointer;
+  border-radius:8px 8px 0 0;
+  color:#566;
+}
+.tab.active{background:#f4f6fa;font-weight:600;color:var(--azul);}
+
+.tab-panel{display:none;padding:18px 20px;}
+.tab-panel.active{display:block;}
+
+.toolbar{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  margin-bottom:14px;
+  flex-wrap:wrap;
+}
+.mes-actual{font-size:18px;font-weight:600;min-width:170px;text-align:center;}
+.spacer{flex:1;}
+
+button{font-family:inherit;}
+.nav-btn{
+  width:36px;height:34px;border:1px solid var(--azul);
+  background:var(--amarillo);border-radius:6px;cursor:pointer;font-size:14px;
+}
+.nav-btn:hover{filter:brightness(.97);}
+.primary-btn{
+  background:var(--azul2);color:#fff;border:none;
+  padding:9px 16px;border-radius:6px;cursor:pointer;font-size:14px;
+}
+.primary-btn:hover{filter:brightness(1.07);}
+.ghost-btn{
+  background:#fff;border:1px solid var(--gris-borde);
+  padding:8px 14px;border-radius:6px;cursor:pointer;font-size:14px;
+}
+.ghost-btn:hover{background:#f0f3f8;}
+.danger-btn{
+  background:#fff;border:1px solid var(--rojo);color:var(--rojo);
+  padding:8px 14px;border-radius:6px;cursor:pointer;font-size:14px;
+}
+.danger-btn:hover{background:#fdecea;}
+
+.grid-wrap{overflow-x:auto;border:1px solid var(--gris-borde);border-radius:8px;background:#fff;}
+
+/* ----- Tabla calendario ----- */
+.cal-table{border-collapse:collapse;width:100%;font-size:13px;}
+.cal-table th,.cal-table td{
+  border:1px solid var(--gris-borde);
+  text-align:center;
+  padding:0;
+  height:30px;
+  min-width:30px;
+}
+.cal-table th.persona-col,.cal-table td.persona-col{
+  text-align:left;
+  padding:0 10px;
+  min-width:140px;
+  position:sticky;left:0;
+  background:#fff;
+  font-weight:600;
+  white-space:nowrap;
+}
+.cal-table thead th{background:var(--azul);color:#fff;font-weight:600;}
+.cal-table thead th.dow{font-size:10px;font-weight:400;opacity:.85;}
+.cal-table td.cell{cursor:pointer;font-weight:600;}
+.cal-table td.cell:hover{outline:2px solid var(--azul2);outline-offset:-2px;}
+.cal-table td.finde{background:var(--finde);}
+.cal-table td.finde-vac{background:var(--finde-vac);}
+.cal-table td.festivo{background:var(--festivo);}
+.cal-table tr.fuera-row td{background:#f7f9fc;font-style:italic;color:#667;}
+.cal-table tr.fuera-row td.alerta{background:#fde2e1;color:var(--rojo);font-weight:700;font-style:normal;}
+.color-dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:7px;vertical-align:middle;}
+
+/* ----- Leyenda ----- */
+.leyenda{margin-top:14px;font-size:13px;display:flex;gap:16px;flex-wrap:wrap;align-items:center;}
+.leyenda .lg{display:flex;align-items:center;gap:6px;}
+.leyenda .note{color:#788;font-style:italic;}
+.chip{display:inline-block;width:16px;height:16px;border-radius:4px;border:1px solid #bbb;}
+.chip-x{background:var(--azul2);}
+.chip-m{background:linear-gradient(135deg,var(--azul2) 50%,#fff 50%);}
+.chip-h{background:#ffe08a;}
+.chip-finde{background:var(--finde);}
+.chip-festivo{background:var(--festivo);}
+
+/* ----- Resumen ----- */
+.resumen-table{border-collapse:collapse;width:100%;font-size:13px;}
+.resumen-table th,.resumen-table td{border:1px solid var(--gris-borde);padding:6px 8px;text-align:center;}
+.resumen-table th{background:var(--azul);color:#fff;}
+.resumen-table td.nombre{text-align:left;font-weight:600;white-space:nowrap;}
+.resumen-table td.sep{background:#eef1f6;}
+.resumen-table tr:nth-child(even) td{background:#fafbfd;}
+.resumen-table td.neg{color:var(--rojo);font-weight:700;}
+.stats{margin-top:16px;display:flex;gap:14px;flex-wrap:wrap;}
+.stat-card{background:#fff;border:1px solid var(--gris-borde);border-radius:10px;padding:14px 18px;min-width:150px;}
+.stat-card .n{font-size:26px;font-weight:700;color:var(--azul);}
+.stat-card .l{font-size:12px;color:#667;}
+
+/* ----- Modal ----- */
+.overlay{
+  display:none;position:fixed;inset:0;background:rgba(20,28,40,.45);
+  align-items:center;justify-content:center;padding:16px;z-index:50;
+}
+.overlay.open{display:flex;}
+.modal{background:#fff;border-radius:12px;padding:22px;width:380px;max-width:100%;box-shadow:0 12px 40px rgba(0,0,0,.25);}
+.modal h3{margin:0 0 14px;color:var(--azul);}
+.modal label{display:block;font-size:13px;margin:10px 0 4px;font-weight:600;}
+.modal .muted{font-weight:400;color:#889;font-size:11px;}
+.modal select,.modal input[type=date],.modal input[type=number]{
+  width:100%;padding:8px;border:1px solid var(--gris-borde);border-radius:6px;font-size:14px;
+}
+.row2{display:flex;gap:12px;}
+.row2>div{flex:1;}
+.tipos{margin:14px 0 6px;display:flex;flex-direction:column;gap:6px;}
+.radio{font-weight:400 !important;font-size:14px;display:flex;align-items:center;gap:8px;margin:0 !important;}
+.horas-box{margin-top:4px;}
+.modal-msg{color:var(--rojo);font-size:13px;min-height:18px;margin-top:8px;}
+.modal-actions{display:flex;align-items:center;gap:8px;margin-top:16px;}
+
+/* ----- Toast ----- */
+.toast{
+  position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);
+  background:var(--azul);color:#fff;padding:12px 22px;border-radius:8px;
+  opacity:0;transition:all .3s;z-index:60;font-size:14px;
+}
+.toast.show{transform:translateX(-50%) translateY(0);opacity:1;}
+
+/* ----- Header derecho ----- */
+.header-right{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+.user-email{font-size:13px;opacity:.9;}
+.ghost-btn.sm,.danger-btn.sm{padding:5px 9px;font-size:12px;}
+.primary-btn.full{width:100%;margin-top:6px;}
+
+/* ----- Login ----- */
+.login-screen{position:fixed;inset:0;background:#eef1f7;display:flex;align-items:center;justify-content:center;padding:16px;}
+.login-card{background:#fff;border-radius:14px;padding:28px;width:340px;max-width:100%;box-shadow:0 14px 50px rgba(0,0,0,.15);}
+.login-title{font-size:20px;font-weight:700;color:var(--azul);text-align:center;}
+.login-sub{font-size:13px;color:#667;text-align:center;margin:6px 0 18px;}
+.login-card label{display:block;font-size:13px;font-weight:600;margin:10px 0 4px;}
+.login-card input{width:100%;padding:9px;border:1px solid var(--gris-borde);border-radius:6px;font-size:14px;}
+.login-foot{font-size:12px;color:#889;text-align:center;margin:14px 0 0;}
+
+/* ----- Ajustes ----- */
+.ajustes-block{background:#fff;border:1px solid var(--gris-borde);border-radius:10px;padding:16px 18px;margin-bottom:16px;}
+.ajustes-block h3{margin:0 0 12px;color:var(--azul);}
+.param-row{display:flex;gap:18px;align-items:flex-end;flex-wrap:wrap;}
+.param-row label{display:flex;flex-direction:column;font-size:13px;font-weight:600;gap:4px;}
+.param-row input{padding:7px;border:1px solid var(--gris-borde);border-radius:6px;width:90px;}
+.cfg-table{border-collapse:collapse;width:100%;font-size:13px;margin-bottom:10px;}
+.cfg-table th,.cfg-table td{border:1px solid var(--gris-borde);padding:6px 8px;text-align:left;}
+.cfg-table th{background:#eef1f6;}
+.cfg-table input{padding:5px;border:1px solid var(--gris-borde);border-radius:5px;}
+.add-row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
+.add-row input{padding:7px;border:1px solid var(--gris-borde);border-radius:6px;}
+.add-row input[type=text]{min-width:120px;}
+
+</style>
+</head>
+<body>
+
+  <!-- ===================== LOGIN ===================== -->
+  <div id="loginScreen" class="login-screen" style="display:none;">
+    <form class="login-card" id="loginForm">
+      <div class="login-title">📅 Calendario de Vacaciones</div>
+      <p class="login-sub">Introduce tu cuenta para entrar.</p>
+      <label>Email</label>
+      <input type="email" id="loginEmail" autocomplete="username" required />
+      <label>Contraseña</label>
+      <input type="password" id="loginPass" autocomplete="current-password" required />
+      <div id="loginMsg" class="modal-msg"></div>
+      <button type="submit" class="primary-btn full">Entrar</button>
+      <p class="login-foot">¿No tienes cuenta? Pídesela al administrador.</p>
+    </form>
+  </div>
+
+  <!-- ===================== APP ===================== -->
+  <div id="appRoot" style="display:none;">
+    <header class="app-header">
+      <div class="title">📅 Calendario de Vacaciones <span id="hdrYear"></span></div>
+      <div class="header-right">
+        <span class="mode-badge" id="modeBadge"></span>
+        <span class="user-email" id="userEmail"></span>
+        <button id="btnPass" class="ghost-btn sm">Cambiar contraseña</button>
+        <button id="btnLogout" class="ghost-btn sm" style="display:none;">Salir</button>
+      </div>
+    </header>
+
+    <nav class="tabs">
+      <button class="tab active" data-tab="calendario">Calendario</button>
+      <button class="tab" data-tab="resumen">Resumen</button>
+      <button class="tab" data-tab="ajustes">Ajustes</button>
+      <button class="tab" data-tab="registro">Registro</button>
+    </nav>
+
+    <!-- ----- CALENDARIO ----- -->
+    <section id="tab-calendario" class="tab-panel active">
+      <div class="toolbar">
+        <button id="btnPrev" class="nav-btn" title="Mes anterior">◀</button>
+        <div id="mesActual" class="mes-actual"></div>
+        <button id="btnNext" class="nav-btn" title="Mes siguiente">▶</button>
+        <button id="btnHoy" class="ghost-btn">Hoy</button>
+        <div class="spacer"></div>
+        <button id="btnPedir" class="primary-btn">+ Pedir vacaciones / horas</button>
+      </div>
+      <div class="grid-wrap"><table id="tablaCal" class="cal-table"></table></div>
+      <div class="leyenda">
+        <strong>Leyenda:</strong>
+        <span class="lg"><span class="chip chip-x"></span> X = día entero</span>
+        <span class="lg"><span class="chip chip-m"></span> M = medio día</span>
+        <span class="lg"><span class="chip chip-h"></span> nº = horas de exceso</span>
+        <span class="lg"><span class="chip chip-finde"></span> finde</span>
+        <span class="lg"><span class="chip chip-festivo"></span> festivo</span>
+        <span class="lg note">· Doble clic en una celda para marcar/editar ese día.</span>
+      </div>
+    </section>
+
+    <!-- ----- RESUMEN ----- -->
+    <section id="tab-resumen" class="tab-panel">
+      <div class="grid-wrap"><table id="tablaResumen" class="resumen-table"></table></div>
+      <div class="stats" id="statsBox"></div>
+    </section>
+
+    <!-- ----- AJUSTES ----- -->
+    <section id="tab-ajustes" class="tab-panel">
+      <div class="ajustes-block">
+        <h3>Parámetros generales</h3>
+        <div class="param-row">
+          <label>Año <input type="number" id="ajYear" /></label>
+          <label>Máx. personas fuera a la vez <input type="number" id="ajMaxFuera" min="1" /></label>
+          <label>Horas por día completo <input type="number" id="ajHorasDia" min="1" step="0.5" /></label>
+          <button id="btnGuardarParams" class="primary-btn">Guardar parámetros</button>
+        </div>
+      </div>
+
+      <div class="ajustes-block">
+        <h3>Compañeros</h3>
+        <table id="tablaPersonas" class="cfg-table"></table>
+        <div class="add-row">
+          <input type="text" id="npNombre" placeholder="Nombre" />
+          <input type="text" id="npColor" placeholder="Color hex (ej. 4472C4)" maxlength="6" />
+          <input type="number" id="npDias" placeholder="Días" value="22" />
+          <input type="number" id="npHoras" placeholder="Horas" value="20" />
+          <button id="btnAddPersona" class="primary-btn">+ Añadir compañero</button>
+        </div>
+      </div>
+
+      <div class="ajustes-block">
+        <h3>Festivos</h3>
+        <table id="tablaFestivos" class="cfg-table"></table>
+        <div class="add-row">
+          <input type="date" id="nfFecha" />
+          <input type="text" id="nfNombre" placeholder="Nombre del festivo" />
+          <button id="btnAddFestivo" class="primary-btn">+ Añadir festivo</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ----- REGISTRO (LOGS) ----- -->
+    <section id="tab-registro" class="tab-panel">
+      <div class="toolbar">
+        <h3 style="margin:0;">Registro de acciones</h3>
+        <div class="spacer"></div>
+        <button id="btnRefreshLogs" class="ghost-btn">Actualizar</button>
+      </div>
+      <div class="grid-wrap"><table id="tablaLogs" class="resumen-table"></table></div>
+    </section>
+  </div>
+
+  <!-- ===================== MODAL PEDIR ===================== -->
+  <div id="overlay" class="overlay">
+    <div class="modal">
+      <h3 id="modalTitulo">Pedir vacaciones / horas</h3>
+      <label>Compañero</label>
+      <select id="mPersona"></select>
+      <div class="row2">
+        <div><label>Desde</label><input type="date" id="mDesde" /></div>
+        <div><label>Hasta <span class="muted">(vacío = un solo día)</span></label><input type="date" id="mHasta" /></div>
+      </div>
+      <div class="tipos">
+        <label class="radio"><input type="radio" name="tipo" value="X" checked /> Día(s) entero(s)</label>
+        <label class="radio"><input type="radio" name="tipo" value="M" /> Medio día (solo 1 día)</label>
+        <label class="radio"><input type="radio" name="tipo" value="H" /> Horas de exceso (solo 1 día)</label>
+      </div>
+      <div id="horasBox" class="horas-box" style="display:none;">
+        <label>Horas</label><input type="number" id="mHoras" min="0" step="0.5" />
+      </div>
+      <div id="modalMsg" class="modal-msg"></div>
+      <div class="modal-actions">
+        <button id="mBorrar" class="danger-btn">Borrar día(s)</button>
+        <div class="spacer"></div>
+        <button id="mCancelar" class="ghost-btn">Cancelar</button>
+        <button id="mGuardar" class="primary-btn">Guardar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================== MODAL CAMBIAR CONTRASEÑA ===================== -->
+  <div id="overlayPass" class="overlay">
+    <div class="modal">
+      <h3>Cambiar contraseña</h3>
+      <label>Nueva contraseña</label>
+      <input type="password" id="newPass" autocomplete="new-password" />
+      <label>Repite la nueva contraseña</label>
+      <input type="password" id="newPass2" autocomplete="new-password" />
+      <div id="passMsg" class="modal-msg"></div>
+      <div class="modal-actions">
+        <div class="spacer"></div>
+        <button id="passCancelar" class="ghost-btn">Cancelar</button>
+        <button id="passGuardar" class="primary-btn">Guardar</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>
+// ============================================================
+//  CONFIGURACIÓN DE CONEXIÓN
+// ============================================================
+//  Mientras estos dos valores estén vacíos, la app funciona en
+//  MODO LOCAL de prueba (sin cuentas, datos solo en tu navegador),
+//  usando los valores por defecto de abajo.
+//
+//  Cuando pegues aquí tu URL y tu clave "anon" de Supabase, la app
+//  pasa a MODO COMPARTIDO: login con cuenta y contraseña, datos
+//  compartidos por todos y registro de acciones (logs).
+//  (Mira el README.md para saber de dónde se sacan estos valores.)
+// ============================================================
+
+window.APP_CONFIG = {
+  supabaseUrl:     "",
+  supabaseAnonKey: "",
+
+  // --- Valores por defecto SOLO para el modo local de prueba ---
+  // (En modo compartido todo esto se gestiona desde la pestaña "Ajustes".)
+  defaults: {
+    year:        2026,
+    maxFuera:    2,
+    horasPorDia: 8,
+    personas: [
+      { nombre: "Jose Angel",    color: "1F77B4", dias_anuales: 22, bolsa_horas: 20 },
+      { nombre: "David Vaquero", color: "E15759", dias_anuales: 22, bolsa_horas: 20 },
+      { nombre: "Carlos Pernas", color: "59A14F", dias_anuales: 22, bolsa_horas: 20 },
+      { nombre: "Diego Ponte",   color: "F28E2B", dias_anuales: 22, bolsa_horas: 20 },
+      { nombre: "Joel Feijoo",   color: "AF7AA1", dias_anuales: 22, bolsa_horas: 20 },
+      { nombre: "Javier Orosa",  color: "4E79A7", dias_anuales: 22, bolsa_horas: 20 }
+    ],
+    festivos: [
+      { fecha: "2026-01-01", nombre: "Año Nuevo" },
+      { fecha: "2026-01-06", nombre: "Reyes" },
+      { fecha: "2026-05-01", nombre: "Día del Trabajo" },
+      { fecha: "2026-08-15", nombre: "Asunción" },
+      { fecha: "2026-10-12", nombre: "Fiesta Nacional" },
+      { fecha: "2026-12-25", nombre: "Navidad" }
+    ]
+  }
+};
+
+</script>
+  <script>
+// ============================================================
+//  STORE — capa de datos y autenticación
+//  Funciona con Supabase (modo compartido) o con localStorage
+//  (modo local de prueba) según haya claves en config.js.
+// ============================================================
+window.Store = (() => {
+  const CFG = window.APP_CONFIG;
+  const usaSupabase = !!(CFG.supabaseUrl && CFG.supabaseAnonKey);
+  let sb = null;
+  if (usaSupabase) sb = window.supabase.createClient(CFG.supabaseUrl, CFG.supabaseAnonKey);
+
+  // -------- helpers localStorage --------
+  const LS = {
+    personas: "vac_personas",
+    ajustes:  "vac_ajustes",
+    festivos: "vac_festivos",
+    marcas:   "vac_marcas",
+    logs:     "vac_logs"
+  };
+  const lsGet = (k, def) => { const r = localStorage.getItem(k); return r ? JSON.parse(r) : def; };
+  const lsSet = (k, v) => localStorage.setItem(k, JSON.stringify(v));
+
+  function seedLocalSiHaceFalta(){
+    if (localStorage.getItem(LS.personas)) return;
+    const d = CFG.defaults;
+    lsSet(LS.personas, d.personas.map((p,i) => ({ id:i+1, orden:i+1, ...p })));
+    lsSet(LS.ajustes,  { year:d.year, max_fuera:d.maxFuera, horas_por_dia:d.horasPorDia });
+    lsSet(LS.festivos, d.festivos.slice());
+    lsSet(LS.marcas,   []);
+    lsSet(LS.logs,     []);
+  }
+
+  // ============================================================
+  //  AUTENTICACIÓN
+  // ============================================================
+  async function getUser(){
+    if (!usaSupabase) return { email: "(local)" };
+    const { data } = await sb.auth.getSession();
+    return data.session ? data.session.user : null;
+  }
+  async function login(email, password){
+    if (!usaSupabase) return { ok:true };
+    const { error } = await sb.auth.signInWithPassword({ email, password });
+    return error ? { ok:false, msg:error.message } : { ok:true };
+  }
+  async function logout(){ if (usaSupabase) await sb.auth.signOut(); }
+  async function changePassword(newPassword){
+    if (!usaSupabase) return { ok:false, msg:"En modo local no hay contraseñas." };
+    const { error } = await sb.auth.updateUser({ password:newPassword });
+    return error ? { ok:false, msg:error.message } : { ok:true };
+  }
+  function onAuthChange(cb){ if (usaSupabase) sb.auth.onAuthStateChange((_e,s)=>cb(s?s.user:null)); }
+
+  // ============================================================
+  //  CARGA GENERAL
+  // ============================================================
+  async function loadAll(){
+    if (usaSupabase){
+      const [pe,aj,fe,ma] = await Promise.all([
+        sb.from("personas").select("*").order("orden"),
+        sb.from("ajustes").select("*"),
+        sb.from("festivos").select("*").order("fecha"),
+        sb.from("marcas").select("*")
+      ]);
+      const ajustes = {};
+      (aj.data||[]).forEach(r => ajustes[r.clave] = r.valor);
+      return {
+        personas: pe.data || [],
+        ajustes:  { year:+ajustes.year||CFG.defaults.year, max_fuera:+ajustes.max_fuera||0, horas_por_dia:+ajustes.horas_por_dia||8 },
+        festivos: fe.data || [],
+        marcas:   ma.data || []
+      };
+    } else {
+      seedLocalSiHaceFalta();
+      return {
+        personas: lsGet(LS.personas, []),
+        ajustes:  lsGet(LS.ajustes, {}),
+        festivos: lsGet(LS.festivos, []),
+        marcas:   lsGet(LS.marcas, [])
+      };
+    }
+  }
+
+  // ============================================================
+  //  PERSONAS
+  // ============================================================
+  async function addPersona(p){
+    if (usaSupabase){ const { error } = await sb.from("personas").insert(p); return !error; }
+    const arr = lsGet(LS.personas, []);
+    const id = arr.reduce((m,x)=>Math.max(m,x.id),0)+1;
+    arr.push({ id, orden:id, ...p }); lsSet(LS.personas, arr); return true;
+  }
+  async function updatePersona(id, fields){
+    if (usaSupabase){ const { error } = await sb.from("personas").update(fields).eq("id",id); return !error; }
+    const arr = lsGet(LS.personas, []);
+    const i = arr.findIndex(x=>x.id===id); if (i>=0) Object.assign(arr[i], fields);
+    lsSet(LS.personas, arr); return true;
+  }
+  async function deletePersona(id){
+    if (usaSupabase){ const { error } = await sb.from("personas").delete().eq("id",id); return !error; }
+    lsSet(LS.personas, lsGet(LS.personas, []).filter(x=>x.id!==id));
+    lsSet(LS.marcas,   lsGet(LS.marcas, []).filter(x=>x.persona_id!==id));
+    return true;
+  }
+
+  // ============================================================
+  //  AJUSTES GLOBALES
+  // ============================================================
+  async function setAjustes(obj){
+    if (usaSupabase){
+      const rows = Object.entries(obj).map(([clave,valor]) => ({ clave, valor:String(valor) }));
+      const { error } = await sb.from("ajustes").upsert(rows, { onConflict:"clave" });
+      return !error;
+    }
+    const a = lsGet(LS.ajustes, {}); Object.assign(a, obj); lsSet(LS.ajustes, a); return true;
+  }
+
+  // ============================================================
+  //  FESTIVOS
+  // ============================================================
+  async function addFestivo(fecha, nombre){
+    if (usaSupabase){ const { error } = await sb.from("festivos").upsert({ fecha, nombre }, { onConflict:"fecha" }); return !error; }
+    const arr = lsGet(LS.festivos, []).filter(f=>f.fecha!==fecha);
+    arr.push({ fecha, nombre }); arr.sort((a,b)=>a.fecha<b.fecha?-1:1); lsSet(LS.festivos, arr); return true;
+  }
+  async function deleteFestivo(fecha){
+    if (usaSupabase){ const { error } = await sb.from("festivos").delete().eq("fecha",fecha); return !error; }
+    lsSet(LS.festivos, lsGet(LS.festivos, []).filter(f=>f.fecha!==fecha)); return true;
+  }
+
+  // ============================================================
+  //  MARCAS
+  // ============================================================
+  async function setMarca(persona_id, fecha, valor){
+    if (usaSupabase){ const { error } = await sb.from("marcas").upsert({ persona_id, fecha, valor:String(valor) }, { onConflict:"persona_id,fecha" }); return !error; }
+    const arr = lsGet(LS.marcas, []).filter(m=>!(m.persona_id===persona_id && m.fecha===fecha));
+    arr.push({ persona_id, fecha, valor:String(valor) }); lsSet(LS.marcas, arr); return true;
+  }
+  async function delMarca(persona_id, fecha){
+    if (usaSupabase){ const { error } = await sb.from("marcas").delete().match({ persona_id, fecha }); return !error; }
+    lsSet(LS.marcas, lsGet(LS.marcas, []).filter(m=>!(m.persona_id===persona_id && m.fecha===fecha))); return true;
+  }
+
+  // ============================================================
+  //  LOGS
+  // ============================================================
+  async function addLog(usuario, accion, detalle){
+    if (usaSupabase){ await sb.from("logs").insert({ usuario, accion, detalle }); return; }
+    const arr = lsGet(LS.logs, []);
+    arr.unshift({ id:Date.now(), ts:new Date().toISOString(), usuario, accion, detalle });
+    lsSet(LS.logs, arr.slice(0,500));
+  }
+  async function loadLogs(limit = 200){
+    if (usaSupabase){ const { data } = await sb.from("logs").select("*").order("ts",{ascending:false}).limit(limit); return data||[]; }
+    return lsGet(LS.logs, []).slice(0, limit);
+  }
+
+  // ============================================================
+  //  TIEMPO REAL
+  // ============================================================
+  function subscribe(onChange){
+    if (!usaSupabase) return;
+    sb.channel("vac-rt")
+      .on("postgres_changes", { event:"*", schema:"public", table:"marcas"   }, onChange)
+      .on("postgres_changes", { event:"*", schema:"public", table:"personas" }, onChange)
+      .on("postgres_changes", { event:"*", schema:"public", table:"festivos" }, onChange)
+      .on("postgres_changes", { event:"*", schema:"public", table:"ajustes"  }, onChange)
+      .subscribe();
+  }
+
+  return {
+    usaSupabase,
+    getUser, login, logout, changePassword, onAuthChange,
+    loadAll, addPersona, updatePersona, deletePersona,
+    setAjustes, addFestivo, deleteFestivo,
+    setMarca, delMarca, addLog, loadLogs, subscribe
+  };
+})();
+
+</script>
+  <script>
+// ============================================================
+//  APP DE VACACIONES — interfaz
+// ============================================================
+const MESES = ["Enero","Febrero","Marzo","Abril","Mayo","Junio",
+               "Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
+const DOW = ["L","M","X","J","V","S","D"];
+
+const state = {
+  user: null,
+  personas: [],            // [{id,nombre,color,dias_anuales,bolsa_horas,orden}]
+  ajustes: { year:2026, max_fuera:2, horas_por_dia:8 },
+  festivosSet: new Set(),  // "AAAA-MM-DD"
+  festivos: [],            // [{fecha,nombre}]
+  marcas: new Map()        // "personaId|fecha" -> valor
+};
+let mesActual = 0;
+
+// ---------- utilidades fecha ----------
+const pad = n => String(n).padStart(2,"0");
+const ymd = (y,m,d) => `${y}-${pad(m+1)}-${pad(d)}`;
+const diasDelMes = (y,m) => new Date(y, m+1, 0).getDate();
+const dowLunes = (y,m,d) => (new Date(y,m,d).getDay()+6)%7;
+const esFinde = (y,m,d) => dowLunes(y,m,d) >= 5;
+const esFinde2 = d => (d.getDay()+6)%7 >= 5;
+const esFestivo = f => state.festivosSet.has(f);
+const key = (pid,f) => pid+"|"+f;
+const fmt = d => ymd(d.getFullYear(), d.getMonth(), d.getDate());
+const personaById = id => state.personas.find(p=>p.id===id);
+
+// ============================================================
+//  ARRANQUE
+// ============================================================
+async function init(){
+  document.getElementById("modeBadge").textContent =
+    Store.usaSupabase ? "Modo compartido" : "Modo local (prueba)";
+  if (Store.usaSupabase) document.getElementById("modeBadge").classList.add("shared");
+
+  state.user = await Store.getUser();
+  Store.onAuthChange(async u => { state.user = u; await routeAuth(); });
+  initEventos();
+  await routeAuth();
+}
+
+async function routeAuth(){
+  const necesitaLogin = Store.usaSupabase && !state.user;
+  document.getElementById("loginScreen").style.display = necesitaLogin ? "flex" : "none";
+  document.getElementById("appRoot").style.display     = necesitaLogin ? "none" : "block";
+  if (necesitaLogin) return;
+  await arrancarApp();
+}
+
+let arrancada = false;
+async function arrancarApp(){
+  document.getElementById("userEmail").textContent = state.user ? state.user.email : "";
+  document.getElementById("btnLogout").style.display = Store.usaSupabase ? "inline-block" : "none";
+  document.getElementById("btnPass").style.display   = Store.usaSupabase ? "inline-block" : "none";
+  await recargar();
+  if (!arrancada){
+    arrancada = true;
+    Store.subscribe(() => recargar());
+    const hoy = new Date();
+    mesActual = (hoy.getFullYear() === state.ajustes.year) ? hoy.getMonth() : 0;
+  }
+}
+
+async function recargar(){
+  const data = await Store.loadAll();
+  state.personas = (data.personas||[]).slice().sort((a,b)=>(a.orden||0)-(b.orden||0));
+  state.ajustes  = data.ajustes;
+  state.festivos = data.festivos||[];
+  state.festivosSet = new Set(state.festivos.map(f=>f.fecha));
+  state.marcas = new Map();
+  (data.marcas||[]).forEach(m => state.marcas.set(key(m.persona_id, m.fecha), String(m.valor)));
+  document.getElementById("hdrYear").textContent = state.ajustes.year;
+  renderTodo();
+}
+
+function renderTodo(){
+  renderCalendario();
+  if (document.querySelector(".tab.active")?.dataset.tab === "resumen") renderResumen();
+}
+
+// ============================================================
+//  CALENDARIO
+// ============================================================
+function renderCalendario(){
+  const y = state.ajustes.year, m = mesActual, nd = diasDelMes(y,m);
+  document.getElementById("mesActual").textContent = `${MESES[m]} ${y}`;
+  const maxFuera = state.ajustes.max_fuera;
+
+  let html = "<thead><tr><th class='persona-col'>Compañero ↓ / Día →</th>";
+  for (let d=1; d<=nd; d++) html += `<th>${d}<div class='dow'>${DOW[dowLunes(y,m,d)]}</div></th>`;
+  html += "</tr></thead><tbody>";
+
+  state.personas.forEach(p => {
+    html += `<tr><td class='persona-col'><span class='color-dot' style='background:#${p.color}'></span>${p.nombre}</td>`;
+    for (let d=1; d<=nd; d++){
+      const f = ymd(y,m,d);
+      const v = state.marcas.get(key(p.id, f));
+      let cls = "cell", style = "", txt = "";
+      if (v !== undefined && v !== ""){
+        txt = v;
+        if (v === "X") style = `background:#${p.color};color:#fff;`;
+        else if (v === "M") style = `background:linear-gradient(135deg,#${p.color} 50%,#fff 50%);color:#${p.color};`;
+        else style = "background:#ffe08a;color:#333;";
+      } else if (esFestivo(f)) cls += " festivo";
+      else if (esFinde(y,m,d)) cls += " finde";
+      html += `<td class='${cls}' style='${style}' data-pid="${p.id}" data-fecha="${f}">${txt}</td>`;
+    }
+    html += "</tr>";
+  });
+
+  html += `<tr class='fuera-row'><td class='persona-col'>Personas fuera</td>`;
+  for (let d=1; d<=nd; d++){
+    const f = ymd(y,m,d);
+    let c = 0;
+    state.personas.forEach(p => { const v = state.marcas.get(key(p.id,f)); if (v==="X"||v==="M") c++; });
+    html += `<td class='${c>maxFuera?"alerta":""}'>${c||""}</td>`;
+  }
+  html += "</tr></tbody>";
+
+  const tabla = document.getElementById("tablaCal");
+  tabla.innerHTML = html;
+  tabla.querySelectorAll("td.cell").forEach(td =>
+    td.addEventListener("dblclick", () => abrirModal(+td.dataset.pid, td.dataset.fecha)));
+}
+
+// ============================================================
+//  RESUMEN
+// ============================================================
+function renderResumen(){
+  const acc = {};
+  state.personas.forEach(p => acc[p.id] = { mes:Array(12).fill(0), dias:0, horas:0 });
+  state.marcas.forEach((v,k) => {
+    const [pid,fecha] = k.split("|"); const id = +pid;
+    if (!acc[id]) return;
+    const m = +fecha.slice(5,7) - 1;
+    if (v === "X"){ acc[id].mes[m]+=1; acc[id].dias+=1; }
+    else if (v === "M"){ acc[id].mes[m]+=0.5; acc[id].dias+=0.5; }
+    else { const h = parseFloat(v); if (!isNaN(h)) acc[id].horas += h; }
+  });
+
+  let html = "<thead><tr><th class='nombre'>Compañero</th>";
+  MESES.forEach(mm => html += `<th>${mm.slice(0,3)}</th>`);
+  html += "<th class='sep'>Días tot.</th><th>Asig.</th><th>Rest.</th><th class='sep'>Horas usad.</th><th>Bolsa</th><th>Rest.</th></tr></thead><tbody>";
+  state.personas.forEach(p => {
+    const a = acc[p.id];
+    html += `<tr><td class='nombre'><span class='color-dot' style='background:#${p.color}'></span>${p.nombre}</td>`;
+    a.mes.forEach(x => html += `<td>${x||""}</td>`);
+    const rest = p.dias_anuales - a.dias, hrest = p.bolsa_horas - a.horas;
+    html += `<td class='sep'><b>${a.dias}</b></td><td>${p.dias_anuales}</td><td class='${rest<0?"neg":""}'>${rest}</td>`;
+    html += `<td class='sep'>${a.horas}</td><td>${p.bolsa_horas}</td><td class='${hrest<0?"neg":""}'>${hrest}</td></tr>`;
+  });
+  html += "</tbody>";
+  document.getElementById("tablaResumen").innerHTML = html;
+
+  let tDias=0,tHoras=0,activos=0; const cargaMes=Array(12).fill(0);
+  state.personas.forEach(p => { const a=acc[p.id]; tDias+=a.dias; tHoras+=a.horas; if(a.dias||a.horas) activos++; a.mes.forEach((x,i)=>cargaMes[i]+=x); });
+  const idxMax = cargaMes.indexOf(Math.max(...cargaMes));
+  const mesMax = Math.max(...cargaMes)>0 ? MESES[idxMax] : "—";
+  document.getElementById("statsBox").innerHTML = `
+    <div class='stat-card'><div class='n'>${tDias}</div><div class='l'>Días totales cogidos</div></div>
+    <div class='stat-card'><div class='n'>${tHoras}</div><div class='l'>Horas totales usadas</div></div>
+    <div class='stat-card'><div class='n'>${activos}/${state.personas.length}</div><div class='l'>Compañeros activos</div></div>
+    <div class='stat-card'><div class='n'>${mesMax}</div><div class='l'>Mes más cargado</div></div>`;
+}
+
+// ============================================================
+//  AJUSTES
+// ============================================================
+function renderAjustes(){
+  document.getElementById("ajYear").value = state.ajustes.year;
+  document.getElementById("ajMaxFuera").value = state.ajustes.max_fuera;
+  document.getElementById("ajHorasDia").value = state.ajustes.horas_por_dia;
+
+  // personas
+  let ph = "<thead><tr><th>Nombre</th><th>Color</th><th>Días anuales</th><th>Bolsa horas</th><th></th></tr></thead><tbody>";
+  state.personas.forEach(p => {
+    ph += `<tr data-id="${p.id}">
+      <td><input class="e-nombre" value="${p.nombre}"></td>
+      <td><input class="e-color" value="${p.color}" maxlength="6" style="width:80px"> <span class="color-dot" style="background:#${p.color}"></span></td>
+      <td><input class="e-dias" type="number" value="${p.dias_anuales}" style="width:70px"></td>
+      <td><input class="e-horas" type="number" value="${p.bolsa_horas}" style="width:70px"></td>
+      <td><button class="ghost-btn sm btn-save-p">Guardar</button> <button class="danger-btn sm btn-del-p">Borrar</button></td>
+    </tr>`;
+  });
+  ph += "</tbody>";
+  const tp = document.getElementById("tablaPersonas");
+  tp.innerHTML = ph;
+  tp.querySelectorAll(".btn-save-p").forEach(b => b.onclick = e => guardarPersona(+e.target.closest("tr").dataset.id));
+  tp.querySelectorAll(".btn-del-p").forEach(b => b.onclick = e => borrarPersona(+e.target.closest("tr").dataset.id));
+
+  // festivos
+  let fh = "<thead><tr><th>Fecha</th><th>Nombre</th><th></th></tr></thead><tbody>";
+  state.festivos.forEach(f => {
+    fh += `<tr data-fecha="${f.fecha}"><td>${f.fecha}</td><td>${f.nombre||""}</td>
+      <td><button class="danger-btn sm btn-del-f">Borrar</button></td></tr>`;
+  });
+  fh += "</tbody>";
+  const tf = document.getElementById("tablaFestivos");
+  tf.innerHTML = fh;
+  tf.querySelectorAll(".btn-del-f").forEach(b => b.onclick = e => borrarFestivo(e.target.closest("tr").dataset.fecha));
+}
+
+async function guardarParams(){
+  const obj = {
+    year:+document.getElementById("ajYear").value,
+    max_fuera:+document.getElementById("ajMaxFuera").value,
+    horas_por_dia:+document.getElementById("ajHorasDia").value
+  };
+  await Store.setAjustes(obj);
+  await log("ajustes", `Parámetros: año=${obj.year}, máx fuera=${obj.max_fuera}, horas/día=${obj.horas_por_dia}`);
+  await recargar(); renderAjustes(); toast("Parámetros guardados");
+}
+async function guardarPersona(id){
+  const tr = document.querySelector(`#tablaPersonas tr[data-id="${id}"]`);
+  const fields = {
+    nombre: tr.querySelector(".e-nombre").value.trim(),
+    color:  tr.querySelector(".e-color").value.trim().replace("#",""),
+    dias_anuales: +tr.querySelector(".e-dias").value,
+    bolsa_horas:  +tr.querySelector(".e-horas").value
+  };
+  if (!fields.nombre){ toast("El nombre no puede estar vacío"); return; }
+  await Store.updatePersona(id, fields);
+  await log("persona", `Editado compañero: ${fields.nombre} (${fields.dias_anuales}d / ${fields.bolsa_horas}h)`);
+  await recargar(); renderAjustes(); toast("Compañero guardado");
+}
+async function borrarPersona(id){
+  const p = personaById(id);
+  if (!confirm(`¿Borrar a "${p.nombre}" y todas sus marcas?`)) return;
+  await Store.deletePersona(id);
+  await log("persona", `Borrado compañero: ${p.nombre}`);
+  await recargar(); renderAjustes(); toast("Compañero borrado");
+}
+async function addPersona(){
+  const nombre = document.getElementById("npNombre").value.trim();
+  if (!nombre){ toast("Pon un nombre"); return; }
+  const color = (document.getElementById("npColor").value.trim()||"4472C4").replace("#","");
+  const dias = +document.getElementById("npDias").value || 22;
+  const horas = +document.getElementById("npHoras").value || 0;
+  const orden = (state.personas.reduce((m,p)=>Math.max(m,p.orden||0),0))+1;
+  await Store.addPersona({ nombre, color, dias_anuales:dias, bolsa_horas:horas, orden });
+  await log("persona", `Añadido compañero: ${nombre}`);
+  document.getElementById("npNombre").value=""; document.getElementById("npColor").value="";
+  await recargar(); renderAjustes(); toast("Compañero añadido");
+}
+async function addFestivo(){
+  const fecha = document.getElementById("nfFecha").value;
+  if (!fecha){ toast("Elige una fecha"); return; }
+  const nombre = document.getElementById("nfNombre").value.trim();
+  await Store.addFestivo(fecha, nombre);
+  await log("festivo", `Añadido festivo: ${fecha} ${nombre}`);
+  document.getElementById("nfNombre").value="";
+  await recargar(); renderAjustes(); toast("Festivo añadido");
+}
+async function borrarFestivo(fecha){
+  await Store.deleteFestivo(fecha);
+  await log("festivo", `Borrado festivo: ${fecha}`);
+  await recargar(); renderAjustes(); toast("Festivo borrado");
+}
+
+// ============================================================
+//  REGISTRO (LOGS)
+// ============================================================
+async function renderLogs(){
+  const logs = await Store.loadLogs(200);
+  let html = "<thead><tr><th>Fecha y hora</th><th>Usuario</th><th>Acción</th><th>Detalle</th></tr></thead><tbody>";
+  if (!logs.length) html += "<tr><td colspan='4'>Sin registros todavía.</td></tr>";
+  logs.forEach(l => {
+    const fecha = new Date(l.ts).toLocaleString("es-ES");
+    html += `<tr><td>${fecha}</td><td>${l.usuario||""}</td><td>${l.accion}</td><td style="text-align:left">${l.detalle||""}</td></tr>`;
+  });
+  html += "</tbody>";
+  document.getElementById("tablaLogs").innerHTML = html;
+}
+function log(accion, detalle){
+  const u = state.user ? state.user.email : "(local)";
+  return Store.addLog(u, accion, detalle);
+}
+
+// ============================================================
+//  MODAL PEDIR
+// ============================================================
+const overlay = document.getElementById("overlay");
+const mPersona = document.getElementById("mPersona");
+const mDesde = document.getElementById("mDesde");
+const mHasta = document.getElementById("mHasta");
+const mHoras = document.getElementById("mHoras");
+const horasBox = document.getElementById("horasBox");
+const modalMsg = document.getElementById("modalMsg");
+const tipoSel = () => document.querySelector("input[name=tipo]:checked").value;
+
+function abrirModal(pidPre, fechaPre){
+  modalMsg.textContent = "";
+  mPersona.innerHTML = state.personas.map(p=>`<option value="${p.id}">${p.nombre}</option>`).join("");
+  if (pidPre) mPersona.value = pidPre;
+  mDesde.value = fechaPre || ymd(state.ajustes.year, mesActual, 1);
+  mHasta.value = ""; mHoras.value = "";
+  document.querySelector("input[name=tipo][value=X]").checked = true;
+  horasBox.style.display = "none";
+  overlay.classList.add("open");
+}
+const cerrarModal = () => overlay.classList.remove("open");
+
+async function guardar(){
+  modalMsg.textContent = "";
+  const pid = +mPersona.value;
+  const p = personaById(pid);
+  const tipo = tipoSel();
+  if (!mDesde.value){ modalMsg.textContent = "Indica la fecha 'Desde'."; return; }
+  const fIni = new Date(mDesde.value+"T00:00:00");
+  const fFin = mHasta.value ? new Date(mHasta.value+"T00:00:00") : new Date(fIni);
+  if (fFin < fIni){ modalMsg.textContent = "La fecha 'Hasta' es anterior a 'Desde'."; return; }
+  if ((tipo==="M"||tipo==="H") && mHasta.value && mHasta.value!==mDesde.value){
+    modalMsg.textContent = "Medio día y horas solo admiten un único día."; return;
+  }
+
+  if (tipo==="H"){
+    const h = parseFloat((mHoras.value||"").replace(",","."));
+    if (isNaN(h)||h<=0){ modalMsg.textContent = "Indica un número de horas válido."; return; }
+    await Store.setMarca(pid, fmt(fIni), h);
+    await log("marca", `${p.nombre}: ${h}h el ${fmt(fIni)}`);
+    return finalizar("Horas guardadas");
+  }
+  if (tipo==="M"){
+    const f = fmt(fIni);
+    if (esFinde2(fIni)||esFestivo(f)){ modalMsg.textContent = "Ese día es finde o festivo."; return; }
+    await Store.setMarca(pid, f, "M");
+    await log("marca", `${p.nombre}: medio día el ${f}`);
+    return finalizar("Medio día guardado");
+  }
+
+  const fechas = [];
+  for (let d=new Date(fIni); d<=fFin; d.setDate(d.getDate()+1)){
+    const f = fmt(d);
+    if (esFinde2(d)||esFestivo(f)) continue;
+    fechas.push(f);
+  }
+  if (!fechas.length){ modalMsg.textContent = "El rango solo contiene findes/festivos."; return; }
+  const conflicto = fechas.find(f => contarFuera(f,pid)+1 > state.ajustes.max_fuera);
+  if (conflicto && !confirm(`El ${conflicto} ya hay ${state.ajustes.max_fuera} persona(s) fuera (máximo).\n\n¿Guardar igualmente?`)) return;
+  for (const f of fechas) await Store.setMarca(pid, f, "X");
+  await log("marca", `${p.nombre}: ${fechas.length} día(s) (${fechas[0]} a ${fechas[fechas.length-1]})`);
+  finalizar(`${fechas.length} día(s) guardado(s)`);
+}
+
+async function borrar(){
+  const pid = +mPersona.value, p = personaById(pid);
+  if (!mDesde.value){ modalMsg.textContent = "Indica la fecha 'Desde'."; return; }
+  const fIni = new Date(mDesde.value+"T00:00:00");
+  const fFin = mHasta.value ? new Date(mHasta.value+"T00:00:00") : new Date(fIni);
+  let n = 0;
+  for (let d=new Date(fIni); d<=fFin; d.setDate(d.getDate()+1)){
+    const f = fmt(d);
+    if (state.marcas.has(key(pid,f))){ await Store.delMarca(pid,f); n++; }
+  }
+  if (n) await log("borrado", `${p.nombre}: ${n} día(s) borrados desde ${fmt(fIni)}`);
+  finalizar(n ? `${n} día(s) borrado(s)` : "No había nada que borrar");
+}
+async function finalizar(msg){ cerrarModal(); await recargar(); toast(msg); }
+function contarFuera(fecha, exclPid){
+  let c=0; state.personas.forEach(p => { if (p.id===exclPid) return; const v=state.marcas.get(key(p.id,fecha)); if (v==="X"||v==="M") c++; });
+  return c;
+}
+
+// ============================================================
+//  TOAST
+// ============================================================
+let toastTimer;
+function toast(msg){
+  const t = document.getElementById("toast");
+  t.textContent = msg; t.classList.add("show");
+  clearTimeout(toastTimer); toastTimer = setTimeout(()=>t.classList.remove("show"), 2600);
+}
+
+// ============================================================
+//  EVENTOS
+// ============================================================
+function initEventos(){
+  // login
+  document.getElementById("loginForm").addEventListener("submit", async e => {
+    e.preventDefault();
+    const msg = document.getElementById("loginMsg"); msg.textContent = "";
+    const r = await Store.login(document.getElementById("loginEmail").value.trim(), document.getElementById("loginPass").value);
+    if (!r.ok){ msg.textContent = "No se pudo entrar: " + (r.msg||"revisa email y contraseña"); return; }
+    state.user = await Store.getUser();
+    await log("login", "Inicio de sesión");
+  });
+  document.getElementById("btnLogout").onclick = async () => { await log("logout","Cierre de sesión"); await Store.logout(); };
+
+  // cambiar contraseña
+  document.getElementById("btnPass").onclick = () => {
+    document.getElementById("passMsg").textContent = "";
+    document.getElementById("newPass").value = ""; document.getElementById("newPass2").value = "";
+    document.getElementById("overlayPass").classList.add("open");
+  };
+  document.getElementById("passCancelar").onclick = () => document.getElementById("overlayPass").classList.remove("open");
+  document.getElementById("passGuardar").onclick = async () => {
+    const a = document.getElementById("newPass").value, b = document.getElementById("newPass2").value;
+    const msg = document.getElementById("passMsg");
+    if (a.length < 6){ msg.textContent = "Mínimo 6 caracteres."; return; }
+    if (a !== b){ msg.textContent = "Las contraseñas no coinciden."; return; }
+    const r = await Store.changePassword(a);
+    if (!r.ok){ msg.textContent = r.msg; return; }
+    await log("password", "Cambio de contraseña");
+    document.getElementById("overlayPass").classList.remove("open");
+    toast("Contraseña cambiada");
+  };
+
+  // navegación mes
+  document.getElementById("btnPrev").onclick = () => { mesActual=(mesActual+11)%12; renderCalendario(); };
+  document.getElementById("btnNext").onclick = () => { mesActual=(mesActual+1)%12; renderCalendario(); };
+  document.getElementById("btnHoy").onclick = () => { const h=new Date(); mesActual=(h.getFullYear()===state.ajustes.year)?h.getMonth():0; renderCalendario(); };
+
+  // modal pedir
+  document.getElementById("btnPedir").onclick = () => abrirModal(null,null);
+  document.getElementById("mGuardar").onclick = guardar;
+  document.getElementById("mBorrar").onclick = borrar;
+  document.getElementById("mCancelar").onclick = cerrarModal;
+  overlay.addEventListener("click", e => { if (e.target===overlay) cerrarModal(); });
+  document.querySelectorAll("input[name=tipo]").forEach(r => r.addEventListener("change", () => horasBox.style.display = tipoSel()==="H"?"block":"none"));
+
+  // ajustes
+  document.getElementById("btnGuardarParams").onclick = guardarParams;
+  document.getElementById("btnAddPersona").onclick = addPersona;
+  document.getElementById("btnAddFestivo").onclick = addFestivo;
+  document.getElementById("btnRefreshLogs").onclick = renderLogs;
+
+  // pestañas
+  document.querySelectorAll(".tab").forEach(tab => {
+    tab.onclick = () => {
+      document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"));
+      document.querySelectorAll(".tab-panel").forEach(p=>p.classList.remove("active"));
+      tab.classList.add("active");
+      document.getElementById("tab-"+tab.dataset.tab).classList.add("active");
+      if (tab.dataset.tab==="resumen") renderResumen();
+      if (tab.dataset.tab==="ajustes") renderAjustes();
+      if (tab.dataset.tab==="registro") renderLogs();
+    };
+  });
+}
+
+init();
+
+</script>
+</body>
+</html>
