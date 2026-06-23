@@ -19,6 +19,17 @@ window.APP_CONFIG = {
   // Añade aquí en minúsculas los correos que quieras que sean administradores.
   adminEmails: ["davidvaquero94@gmail.com", "jsomoza@kimak.com"],
 
+  // ---- TURNOS DE TARDE (se pintan en gris claro en la Vista anual) ----
+  // El sistema lo calcula solo a partir de este patrón; no hay que marcar nada a mano.
+  turnos: {
+    anchorMonday: "2026-01-05",   // lunes de la "Semana 1" del cuadrante
+    // Ciclo de 3 semanas del trío: quién está de TARDE en la semana 1, 2 y 3 (y se repite)
+    cicloTarde: ["Carlos Pernas", "David Vaquero", "Jose Angel"],
+    // Personas que alternan mañana/tarde cada semana y están de TARDE en semanas PARES
+    alternosTardeSemanaPar: ["Javier Orosa"]
+    // (Diego Ponte, Joel Feijoo y José Somoza tienen turno fijo: no se marcan)
+  },
+
   // --- Valores por defecto SOLO para el modo local de prueba ---
   // (En modo compartido todo esto se gestiona desde la pestaña "Ajustes".)
   defaults: {

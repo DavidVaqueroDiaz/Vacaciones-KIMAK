@@ -71,6 +71,28 @@ function canEdit(pid){
 const MESCOLORS = ["4E79A7","E15759","59A14F","EDC948","76B7B2","F28E2B",
                    "B07AA1","9C755F","8CD17D","FF9D9A","BAB0AC","86BCB6"];
 
+// ---------- turnos de tarde ----------
+// Número de semana del cuadrante (semana 1 = la del anchorMonday)
+function semanaCuadrante(y,m,d){
+  const t = window.APP_CONFIG.turnos;
+  if (!t) return 0;
+  const anchor = new Date(t.anchorMonday+"T00:00:00");
+  const fecha = new Date(y,m,d);
+  const lunes = new Date(fecha); lunes.setDate(fecha.getDate() - ((fecha.getDay()+6)%7)); // lunes de esa semana
+  return Math.round((lunes - anchor)/(7*86400000)) + 1;
+}
+// ¿La persona (por nombre) está de turno de tarde en esa semana?
+function esTardeTurno(nombre, semana){
+  const t = window.APP_CONFIG.turnos;
+  if (!t || semana < 1) return false;
+  if ((t.cicloTarde||[]).includes(nombre)){
+    const idx = ((semana-1)%3 + 3) % 3;
+    return t.cicloTarde[idx] === nombre;
+  }
+  if ((t.alternosTardeSemanaPar||[]).includes(nombre)) return semana % 2 === 0;
+  return false;
+}
+
 async function arrancarApp(){
   document.getElementById("userEmail").textContent = state.user ? state.user.email : "";
   document.getElementById("btnLogout").style.display = Store.usaSupabase ? "inline-block" : "none";
@@ -194,6 +216,7 @@ function renderAnio(){
         else if (v !== undefined && v !== ""){ cls = "dia-h"; }
         else if (esFestivo(f)) cls = "festivo";
         else if (esFinde(y,m,day)) cls = "finde";
+        else if (esTardeTurno(p.nombre, semanaCuadrante(y,m,day))) cls = "tarde";
         html += `<td class='${cls}'><span class='d' style='${style}'>${day}</span></td>`;
         day++;
       }
