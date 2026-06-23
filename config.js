@@ -12,8 +12,8 @@
 // ============================================================
 
 window.APP_CONFIG = {
-  supabaseUrl:     "",
-  supabaseAnonKey: "",
+  supabaseUrl:     "https://shtncekxervxerdlssat.supabase.co",
+  supabaseAnonKey: "sb_publishable__NCDfRPV6-PqH0-CdpAcpw_q_B7KLSS",
 
   // --- Valores por defecto SOLO para el modo local de prueba ---
   // (En modo compartido todo esto se gestiona desde la pestaña "Ajustes".)
