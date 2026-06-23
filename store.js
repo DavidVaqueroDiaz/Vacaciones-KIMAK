@@ -51,6 +51,19 @@ window.Store = (() => {
   }
   function onAuthChange(cb){ if (usaSupabase) sb.auth.onAuthStateChange((_e,s)=>cb(s?s.user:null)); }
 
+  // Crea una cuenta sin cerrar la sesión del administrador.
+  // Usa un cliente auxiliar aislado (no guarda sesión) para el registro.
+  async function createUser(email, password){
+    if (!usaSupabase) return { ok:false, msg:"En modo local no hay cuentas." };
+    const aux = window.supabase.createClient(CFG.supabaseUrl, CFG.supabaseAnonKey, {
+      auth: { persistSession:false, autoRefreshToken:false, storageKey:"sb-aux-"+Date.now() }
+    });
+    const { data, error } = await aux.auth.signUp({ email, password });
+    try { await aux.auth.signOut(); } catch(e){}
+    if (error) return { ok:false, msg:error.message };
+    return { ok:true, needsConfirm: !data.session };
+  }
+
   // ============================================================
   //  CARGA GENERAL
   // ============================================================
@@ -156,6 +169,19 @@ window.Store = (() => {
   }
 
   // ============================================================
+  //  PERFILES (lista de cuentas creadas, solo para referencia del admin)
+  // ============================================================
+  async function addPerfil(email){
+    if (usaSupabase){ await sb.from("perfiles").upsert({ email }, { onConflict:"email" }); return; }
+    const arr = lsGet("vac_perfiles", []).filter(p=>p.email!==email);
+    arr.push({ email, creado:new Date().toISOString() }); lsSet("vac_perfiles", arr);
+  }
+  async function loadPerfiles(){
+    if (usaSupabase){ const { data } = await sb.from("perfiles").select("*").order("creado",{ascending:true}); return data||[]; }
+    return lsGet("vac_perfiles", []);
+  }
+
+  // ============================================================
   //  TIEMPO REAL
   // ============================================================
   function subscribe(onChange){
@@ -170,9 +196,10 @@ window.Store = (() => {
 
   return {
     usaSupabase,
-    getUser, login, logout, changePassword, onAuthChange,
+    getUser, login, logout, changePassword, onAuthChange, createUser,
     loadAll, addPersona, updatePersona, deletePersona,
     setAjustes, addFestivo, deleteFestivo,
-    setMarca, delMarca, addLog, loadLogs, subscribe
+    setMarca, delMarca, addLog, loadLogs,
+    addPerfil, loadPerfiles, subscribe
   };
 })();

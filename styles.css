@@ -200,3 +200,6 @@ button{font-family:inherit;}
 .add-row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
 .add-row input{padding:7px;border:1px solid var(--gris-borde);border-radius:6px;}
 .add-row input[type=text]{min-width:120px;}
+.muted-note{font-size:13px;color:#667;margin:0 0 12px;}
+.user-msg{margin-top:12px;font-size:14px;color:var(--rojo);}
+.user-msg.ok{color:#2c6b34;background:#e9f6ec;border:1px solid #bfe3c6;padding:10px 12px;border-radius:8px;}

@@ -39,6 +39,7 @@
       <button class="tab active" data-tab="calendario">Calendario</button>
       <button class="tab" data-tab="resumen">Resumen</button>
       <button class="tab" data-tab="ajustes">Ajustes</button>
+      <button class="tab" data-tab="usuarios" id="tabUsuarios" style="display:none;">Usuarios</button>
       <button class="tab" data-tab="registro">Registro</button>
     </nav>
 
@@ -102,6 +103,26 @@
           <input type="text" id="nfNombre" placeholder="Nombre del festivo" />
           <button id="btnAddFestivo" class="primary-btn">+ Añadir festivo</button>
         </div>
+      </div>
+    </section>
+
+    <!-- ----- USUARIOS (solo admin) ----- -->
+    <section id="tab-usuarios" class="tab-panel">
+      <div class="ajustes-block">
+        <h3>Crear cuenta de compañero</h3>
+        <p class="muted-note">Crea la cuenta, comparte el email y la contraseña con tu compañero, y luego él podrá cambiarla desde «Cambiar contraseña».</p>
+        <div class="add-row">
+          <input type="email" id="nuEmail" placeholder="Email del compañero" />
+          <input type="text" id="nuPass" placeholder="Contraseña inicial (mín. 6)" />
+          <button id="btnGenPass" class="ghost-btn" title="Generar contraseña">🎲 Generar</button>
+          <button id="btnCrearUsuario" class="primary-btn">Crear cuenta</button>
+        </div>
+        <div id="nuMsg" class="user-msg"></div>
+      </div>
+      <div class="ajustes-block">
+        <h3>Cuentas creadas</h3>
+        <p class="muted-note">Para restablecer una contraseña olvidada o borrar una cuenta, hazlo desde Supabase → Authentication → Users.</p>
+        <table id="tablaUsuarios" class="cfg-table"></table>
       </div>
     </section>
 

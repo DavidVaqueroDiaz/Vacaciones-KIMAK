@@ -207,6 +207,9 @@ button{font-family:inherit;}
 .add-row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
 .add-row input{padding:7px;border:1px solid var(--gris-borde);border-radius:6px;}
 .add-row input[type=text]{min-width:120px;}
+.muted-note{font-size:13px;color:#667;margin:0 0 12px;}
+.user-msg{margin-top:12px;font-size:14px;color:var(--rojo);}
+.user-msg.ok{color:#2c6b34;background:#e9f6ec;border:1px solid #bfe3c6;padding:10px 12px;border-radius:8px;}
 
 </style>
 </head>
@@ -243,6 +246,7 @@ button{font-family:inherit;}
       <button class="tab active" data-tab="calendario">Calendario</button>
       <button class="tab" data-tab="resumen">Resumen</button>
       <button class="tab" data-tab="ajustes">Ajustes</button>
+      <button class="tab" data-tab="usuarios" id="tabUsuarios" style="display:none;">Usuarios</button>
       <button class="tab" data-tab="registro">Registro</button>
     </nav>
 
@@ -306,6 +310,26 @@ button{font-family:inherit;}
           <input type="text" id="nfNombre" placeholder="Nombre del festivo" />
           <button id="btnAddFestivo" class="primary-btn">+ Añadir festivo</button>
         </div>
+      </div>
+    </section>
+
+    <!-- ----- USUARIOS (solo admin) ----- -->
+    <section id="tab-usuarios" class="tab-panel">
+      <div class="ajustes-block">
+        <h3>Crear cuenta de compañero</h3>
+        <p class="muted-note">Crea la cuenta, comparte el email y la contraseña con tu compañero, y luego él podrá cambiarla desde «Cambiar contraseña».</p>
+        <div class="add-row">
+          <input type="email" id="nuEmail" placeholder="Email del compañero" />
+          <input type="text" id="nuPass" placeholder="Contraseña inicial (mín. 6)" />
+          <button id="btnGenPass" class="ghost-btn" title="Generar contraseña">🎲 Generar</button>
+          <button id="btnCrearUsuario" class="primary-btn">Crear cuenta</button>
+        </div>
+        <div id="nuMsg" class="user-msg"></div>
+      </div>
+      <div class="ajustes-block">
+        <h3>Cuentas creadas</h3>
+        <p class="muted-note">Para restablecer una contraseña olvidada o borrar una cuenta, hazlo desde Supabase → Authentication → Users.</p>
+        <table id="tablaUsuarios" class="cfg-table"></table>
       </div>
     </section>
 
@@ -386,6 +410,10 @@ window.APP_CONFIG = {
   supabaseUrl:     "https://shtncekxervxerdlssat.supabase.co",
   supabaseAnonKey: "sb_publishable__NCDfRPV6-PqH0-CdpAcpw_q_B7KLSS",
 
+  // Emails que pueden ver el panel de Administración (crear cuentas).
+  // Añade aquí en minúsculas los correos que quieras que sean administradores.
+  adminEmails: ["davidvaquero94@gmail.com"],
+
   // --- Valores por defecto SOLO para el modo local de prueba ---
   // (En modo compartido todo esto se gestiona desde la pestaña "Ajustes".)
   defaults: {
@@ -465,6 +493,19 @@ window.Store = (() => {
     return error ? { ok:false, msg:error.message } : { ok:true };
   }
   function onAuthChange(cb){ if (usaSupabase) sb.auth.onAuthStateChange((_e,s)=>cb(s?s.user:null)); }
+
+  // Crea una cuenta sin cerrar la sesión del administrador.
+  // Usa un cliente auxiliar aislado (no guarda sesión) para el registro.
+  async function createUser(email, password){
+    if (!usaSupabase) return { ok:false, msg:"En modo local no hay cuentas." };
+    const aux = window.supabase.createClient(CFG.supabaseUrl, CFG.supabaseAnonKey, {
+      auth: { persistSession:false, autoRefreshToken:false, storageKey:"sb-aux-"+Date.now() }
+    });
+    const { data, error } = await aux.auth.signUp({ email, password });
+    try { await aux.auth.signOut(); } catch(e){}
+    if (error) return { ok:false, msg:error.message };
+    return { ok:true, needsConfirm: !data.session };
+  }
 
   // ============================================================
   //  CARGA GENERAL
@@ -571,6 +612,19 @@ window.Store = (() => {
   }
 
   // ============================================================
+  //  PERFILES (lista de cuentas creadas, solo para referencia del admin)
+  // ============================================================
+  async function addPerfil(email){
+    if (usaSupabase){ await sb.from("perfiles").upsert({ email }, { onConflict:"email" }); return; }
+    const arr = lsGet("vac_perfiles", []).filter(p=>p.email!==email);
+    arr.push({ email, creado:new Date().toISOString() }); lsSet("vac_perfiles", arr);
+  }
+  async function loadPerfiles(){
+    if (usaSupabase){ const { data } = await sb.from("perfiles").select("*").order("creado",{ascending:true}); return data||[]; }
+    return lsGet("vac_perfiles", []);
+  }
+
+  // ============================================================
   //  TIEMPO REAL
   // ============================================================
   function subscribe(onChange){
@@ -585,10 +639,11 @@ window.Store = (() => {
 
   return {
     usaSupabase,
-    getUser, login, logout, changePassword, onAuthChange,
+    getUser, login, logout, changePassword, onAuthChange, createUser,
     loadAll, addPersona, updatePersona, deletePersona,
     setAjustes, addFestivo, deleteFestivo,
-    setMarca, delMarca, addLog, loadLogs, subscribe
+    setMarca, delMarca, addLog, loadLogs,
+    addPerfil, loadPerfiles, subscribe
   };
 })();
 
@@ -646,10 +701,17 @@ async function routeAuth(){
 }
 
 let arrancada = false;
+function esAdmin(){
+  if (!Store.usaSupabase) return true; // en modo local de prueba todo está permitido
+  const admins = (window.APP_CONFIG.adminEmails||[]).map(e=>e.toLowerCase());
+  return state.user && admins.includes((state.user.email||"").toLowerCase());
+}
+
 async function arrancarApp(){
   document.getElementById("userEmail").textContent = state.user ? state.user.email : "";
   document.getElementById("btnLogout").style.display = Store.usaSupabase ? "inline-block" : "none";
   document.getElementById("btnPass").style.display   = Store.usaSupabase ? "inline-block" : "none";
+  document.getElementById("tabUsuarios").style.display = esAdmin() ? "inline-block" : "none";
   await recargar();
   if (!arrancada){
     arrancada = true;
@@ -875,6 +937,42 @@ function log(accion, detalle){
 }
 
 // ============================================================
+//  USUARIOS (panel de admin)
+// ============================================================
+function generarPass(n = 10){
+  const chars = "abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  let s = ""; for (let i=0;i<n;i++) s += chars[Math.floor(Math.random()*chars.length)];
+  return s;
+}
+async function crearUsuario(){
+  const msg = document.getElementById("nuMsg"); msg.className = "user-msg"; msg.textContent = "";
+  const email = document.getElementById("nuEmail").value.trim();
+  const pass = document.getElementById("nuPass").value;
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)){ msg.textContent = "Email no válido."; return; }
+  if (pass.length < 6){ msg.textContent = "La contraseña debe tener al menos 6 caracteres."; return; }
+  const btn = document.getElementById("btnCrearUsuario"); btn.disabled = true; btn.textContent = "Creando...";
+  const r = await Store.createUser(email, pass);
+  btn.disabled = false; btn.textContent = "Crear cuenta";
+  if (!r.ok){ msg.textContent = "No se pudo crear: " + r.msg; return; }
+  await Store.addPerfil(email);
+  await log("usuario", `Cuenta creada: ${email}`);
+  msg.className = "user-msg ok";
+  msg.innerHTML = r.needsConfirm
+    ? `⚠️ Cuenta creada, pero Supabase pide <b>confirmar el email</b>. Desactiva esa opción (ver instrucciones) para que pueda entrar directamente.`
+    : `✅ Cuenta creada. Comparte estos datos:<br><b>Email:</b> ${email} &nbsp; <b>Contraseña:</b> ${pass}`;
+  document.getElementById("nuEmail").value = ""; document.getElementById("nuPass").value = "";
+  renderUsuarios();
+}
+async function renderUsuarios(){
+  const perfiles = await Store.loadPerfiles();
+  let html = "<thead><tr><th>Email</th><th>Creada</th></tr></thead><tbody>";
+  if (!perfiles.length) html += "<tr><td colspan='2'>Aún no has creado cuentas desde aquí.</td></tr>";
+  perfiles.forEach(p => html += `<tr><td>${p.email}</td><td>${p.creado?new Date(p.creado).toLocaleString("es-ES"):""}</td></tr>`);
+  html += "</tbody>";
+  document.getElementById("tablaUsuarios").innerHTML = html;
+}
+
+// ============================================================
 //  MODAL PEDIR
 // ============================================================
 const overlay = document.getElementById("overlay");
@@ -1022,6 +1120,10 @@ function initEventos(){
   document.getElementById("btnAddFestivo").onclick = addFestivo;
   document.getElementById("btnRefreshLogs").onclick = renderLogs;
 
+  // usuarios (admin)
+  document.getElementById("btnCrearUsuario").onclick = crearUsuario;
+  document.getElementById("btnGenPass").onclick = () => document.getElementById("nuPass").value = generarPass();
+
   // pestañas
   document.querySelectorAll(".tab").forEach(tab => {
     tab.onclick = () => {
@@ -1031,6 +1133,7 @@ function initEventos(){
       document.getElementById("tab-"+tab.dataset.tab).classList.add("active");
       if (tab.dataset.tab==="resumen") renderResumen();
       if (tab.dataset.tab==="ajustes") renderAjustes();
+      if (tab.dataset.tab==="usuarios") renderUsuarios();
       if (tab.dataset.tab==="registro") renderLogs();
     };
   });

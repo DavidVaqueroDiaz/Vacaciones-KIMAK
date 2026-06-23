@@ -65,21 +65,35 @@ Son 3 pasos. La primera vez lleva unos 15 minutos; luego ya no se toca.
 
 ---
 
-## 👤 Crear las cuentas de tus compañeros
+## 👤 Cuentas de usuario
 
-Tú (administrador) das de alta a cada uno:
+Las cuentas se crean **desde la propia app**, en la pestaña **Usuarios** (solo la
+ven los administradores indicados en `config.js → adminEmails`).
 
-1. En Supabase: **Authentication → Users → Add user → Create new user**.
-2. Pon su **email** y una **contraseña inicial**.
-3. **Marca la casilla *Auto Confirm User*** (importante, si no, no podrá entrar).
-4. Repite para cada compañero y repárteles su email + contraseña.
+### Preparativos (una sola vez)
 
-Para que nadie de fuera pueda registrarse solo, en **Authentication → Sign In /
-Providers → Email** desactiva *"Allow new users to sign up"*. Así solo entran
-las cuentas que tú creas.
+1. Ejecuta también el script [`supabase-perfiles.sql`](./supabase-perfiles.sql)
+   en *SQL Editor* (crea la tabla con la lista de cuentas).
+2. En Supabase: **Authentication → Sign In / Providers → Email**:
+   - **Activa** *"Allow new users to sign up"* (necesario para crear cuentas desde la app).
+   - **Desactiva** *"Confirm email"* (para que las cuentas funcionen al instante,
+     sin tener que pulsar un enlace en el correo).
+3. La **primera cuenta** (la tuya de administrador) créala en
+   **Authentication → Users → Add user** y marca *Auto Confirm User*. Usa el mismo
+   email que pusiste en `adminEmails`. A partir de ahí ya creas el resto desde la app.
 
-Cada compañero, una vez dentro, puede pulsar **«Cambiar contraseña»** arriba a la
-derecha para poner la suya.
+### Crear cuentas desde la app
+
+1. Entra con tu cuenta de administrador → pestaña **Usuarios**.
+2. Escribe el **email** del compañero, pon o **🎲 genera** una contraseña, y pulsa
+   **Crear cuenta**.
+3. Comparte con él el email + contraseña que aparecen.
+4. Cada compañero, una vez dentro, pulsa **«Cambiar contraseña»** (arriba a la
+   derecha) para poner la suya.
+
+> Para **restablecer** una contraseña olvidada o **borrar** una cuenta, hazlo desde
+> **Supabase → Authentication → Users** (eso requiere la clave secreta y por
+> seguridad no se hace desde la web).
 
 ---
 

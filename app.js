@@ -50,10 +50,17 @@ async function routeAuth(){
 }
 
 let arrancada = false;
+function esAdmin(){
+  if (!Store.usaSupabase) return true; // en modo local de prueba todo está permitido
+  const admins = (window.APP_CONFIG.adminEmails||[]).map(e=>e.toLowerCase());
+  return state.user && admins.includes((state.user.email||"").toLowerCase());
+}
+
 async function arrancarApp(){
   document.getElementById("userEmail").textContent = state.user ? state.user.email : "";
   document.getElementById("btnLogout").style.display = Store.usaSupabase ? "inline-block" : "none";
   document.getElementById("btnPass").style.display   = Store.usaSupabase ? "inline-block" : "none";
+  document.getElementById("tabUsuarios").style.display = esAdmin() ? "inline-block" : "none";
   await recargar();
   if (!arrancada){
     arrancada = true;
@@ -279,6 +286,42 @@ function log(accion, detalle){
 }
 
 // ============================================================
+//  USUARIOS (panel de admin)
+// ============================================================
+function generarPass(n = 10){
+  const chars = "abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  let s = ""; for (let i=0;i<n;i++) s += chars[Math.floor(Math.random()*chars.length)];
+  return s;
+}
+async function crearUsuario(){
+  const msg = document.getElementById("nuMsg"); msg.className = "user-msg"; msg.textContent = "";
+  const email = document.getElementById("nuEmail").value.trim();
+  const pass = document.getElementById("nuPass").value;
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)){ msg.textContent = "Email no válido."; return; }
+  if (pass.length < 6){ msg.textContent = "La contraseña debe tener al menos 6 caracteres."; return; }
+  const btn = document.getElementById("btnCrearUsuario"); btn.disabled = true; btn.textContent = "Creando...";
+  const r = await Store.createUser(email, pass);
+  btn.disabled = false; btn.textContent = "Crear cuenta";
+  if (!r.ok){ msg.textContent = "No se pudo crear: " + r.msg; return; }
+  await Store.addPerfil(email);
+  await log("usuario", `Cuenta creada: ${email}`);
+  msg.className = "user-msg ok";
+  msg.innerHTML = r.needsConfirm
+    ? `⚠️ Cuenta creada, pero Supabase pide <b>confirmar el email</b>. Desactiva esa opción (ver instrucciones) para que pueda entrar directamente.`
+    : `✅ Cuenta creada. Comparte estos datos:<br><b>Email:</b> ${email} &nbsp; <b>Contraseña:</b> ${pass}`;
+  document.getElementById("nuEmail").value = ""; document.getElementById("nuPass").value = "";
+  renderUsuarios();
+}
+async function renderUsuarios(){
+  const perfiles = await Store.loadPerfiles();
+  let html = "<thead><tr><th>Email</th><th>Creada</th></tr></thead><tbody>";
+  if (!perfiles.length) html += "<tr><td colspan='2'>Aún no has creado cuentas desde aquí.</td></tr>";
+  perfiles.forEach(p => html += `<tr><td>${p.email}</td><td>${p.creado?new Date(p.creado).toLocaleString("es-ES"):""}</td></tr>`);
+  html += "</tbody>";
+  document.getElementById("tablaUsuarios").innerHTML = html;
+}
+
+// ============================================================
 //  MODAL PEDIR
 // ============================================================
 const overlay = document.getElementById("overlay");
@@ -426,6 +469,10 @@ function initEventos(){
   document.getElementById("btnAddFestivo").onclick = addFestivo;
   document.getElementById("btnRefreshLogs").onclick = renderLogs;
 
+  // usuarios (admin)
+  document.getElementById("btnCrearUsuario").onclick = crearUsuario;
+  document.getElementById("btnGenPass").onclick = () => document.getElementById("nuPass").value = generarPass();
+
   // pestañas
   document.querySelectorAll(".tab").forEach(tab => {
     tab.onclick = () => {
@@ -435,6 +482,7 @@ function initEventos(){
       document.getElementById("tab-"+tab.dataset.tab).classList.add("active");
       if (tab.dataset.tab==="resumen") renderResumen();
       if (tab.dataset.tab==="ajustes") renderAjustes();
+      if (tab.dataset.tab==="usuarios") renderUsuarios();
       if (tab.dataset.tab==="registro") renderLogs();
     };
   });
