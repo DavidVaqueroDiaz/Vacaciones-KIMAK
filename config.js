@@ -17,7 +17,7 @@ window.APP_CONFIG = {
 
   // Emails que pueden ver el panel de Administración (crear cuentas).
   // Añade aquí en minúsculas los correos que quieras que sean administradores.
-  adminEmails: ["davidvaquero94@gmail.com"],
+  adminEmails: ["davidvaquero94@gmail.com", "jsomoza@kimak.com"],
 
   // --- Valores por defecto SOLO para el modo local de prueba ---
   // (En modo compartido todo esto se gestiona desde la pestaña "Ajustes".)
