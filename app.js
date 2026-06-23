@@ -55,6 +55,21 @@ function esAdmin(){
   const admins = (window.APP_CONFIG.adminEmails||[]).map(e=>e.toLowerCase());
   return state.user && admins.includes((state.user.email||"").toLowerCase());
 }
+const emailActual = () => (state.user && state.user.email ? state.user.email : "").toLowerCase();
+// Persona vinculada a la cuenta actual (por email). En modo local no aplica.
+function miPersona(){
+  if (!Store.usaSupabase) return null;
+  return state.personas.find(p => (p.email||"").toLowerCase() === emailActual()) || null;
+}
+// ¿Puede la cuenta actual editar las vacaciones / datos de esta persona?
+function canEdit(pid){
+  if (esAdmin()) return true;
+  const mp = miPersona();
+  return !!mp && mp.id === pid;
+}
+// Colores pastel para los 12 meses de la vista anual
+const MESCOLORS = ["4E79A7","E15759","59A14F","EDC948","76B7B2","F28E2B",
+                   "B07AA1","9C755F","8CD17D","FF9D9A","BAB0AC","86BCB6"];
 
 async function arrancarApp(){
   document.getElementById("userEmail").textContent = state.user ? state.user.email : "";
@@ -100,11 +115,14 @@ function renderCalendario(){
   html += "</tr></thead><tbody>";
 
   state.personas.forEach(p => {
-    html += `<tr><td class='persona-col'><span class='color-dot' style='background:#${p.color}'></span>${p.nombre}</td>`;
+    const editable = canEdit(p.id);
+    const mp = miPersona();
+    const esMia = mp && mp.id === p.id;
+    html += `<tr class='${esMia?"fila-mia":""}'><td class='persona-col'><span class='color-dot' style='background:#${p.color}'></span>${p.nombre}${esMia?" <span class='yo'>(tú)</span>":""}</td>`;
     for (let d=1; d<=nd; d++){
       const f = ymd(y,m,d);
       const v = state.marcas.get(key(p.id, f));
-      let cls = "cell", style = "", txt = "";
+      let cls = "cell" + (editable ? "" : " ro"), style = "", txt = "";
       if (v !== undefined && v !== ""){
         txt = v;
         if (v === "X") style = `background:#${p.color};color:#fff;`;
@@ -129,7 +147,61 @@ function renderCalendario(){
   const tabla = document.getElementById("tablaCal");
   tabla.innerHTML = html;
   tabla.querySelectorAll("td.cell").forEach(td =>
-    td.addEventListener("dblclick", () => abrirModal(+td.dataset.pid, td.dataset.fecha)));
+    td.addEventListener("dblclick", () => {
+      const pid = +td.dataset.pid;
+      if (!canEdit(pid)){ toast("Solo puedes editar tus propias vacaciones."); return; }
+      abrirModal(pid, td.dataset.fecha);
+    }));
+
+  populateAnioSelector();
+  renderAnio();
+}
+
+// ============================================================
+//  VISTA ANUAL (12 minicalendarios)
+// ============================================================
+function populateAnioSelector(){
+  const sel = document.getElementById("anioPersona");
+  const prev = sel.value;
+  sel.innerHTML = state.personas.map(p => `<option value="${p.id}">${p.nombre}</option>`).join("");
+  const mp = miPersona();
+  const def = (prev && state.personas.some(p=>String(p.id)===prev)) ? prev
+            : (mp ? String(mp.id) : (state.personas[0] ? String(state.personas[0].id) : ""));
+  if (def) sel.value = def;
+}
+function renderAnio(){
+  const sel = document.getElementById("anioPersona");
+  const pid = +sel.value;
+  const p = personaById(pid);
+  const cont = document.getElementById("anioGrid");
+  if (!p){ cont.innerHTML = ""; return; }
+  const y = state.ajustes.year;
+  let html = "";
+  for (let m=0; m<12; m++){
+    html += `<div class='mini-mes'><h4 style='background:#${MESCOLORS[m]}'>${MESES[m]}</h4>`;
+    html += "<table class='mini-tabla'><thead><tr>" + DOW.map(d=>`<th>${d}</th>`).join("") + "</tr></thead><tbody>";
+    const nd = diasDelMes(y,m), first = dowLunes(y,m,1);
+    let day = 1;
+    for (let row=0; row<6 && day<=nd; row++){
+      html += "<tr>";
+      for (let c=0; c<7; c++){
+        if ((row===0 && c<first) || day>nd){ html += "<td></td>"; continue; }
+        const f = ymd(y,m,day);
+        const v = state.marcas.get(key(pid,f));
+        let cls = "", style = "";
+        if (v === "X"){ cls = "dia-x"; style = `background:#${p.color}`; }
+        else if (v === "M"){ cls = "dia-m"; style = `color:#${p.color}`; }
+        else if (v !== undefined && v !== ""){ cls = "dia-h"; }
+        else if (esFestivo(f)) cls = "festivo";
+        else if (esFinde(y,m,day)) cls = "finde";
+        html += `<td class='${cls}'><span class='d' style='${style}'>${day}</span></td>`;
+        day++;
+      }
+      html += "</tr>";
+    }
+    html += "</tbody></table></div>";
+  }
+  cont.innerHTML = html;
 }
 
 // ============================================================
@@ -176,19 +248,32 @@ function renderResumen(){
 //  AJUSTES
 // ============================================================
 function renderAjustes(){
+  const isAdm = esAdmin();
   document.getElementById("ajYear").value = state.ajustes.year;
   document.getElementById("ajMaxFuera").value = state.ajustes.max_fuera;
   document.getElementById("ajHorasDia").value = state.ajustes.horas_por_dia;
 
+  // bloques solo-admin
+  document.getElementById("blockParams").style.display = isAdm ? "block" : "none";
+  document.getElementById("blockFestivos").style.display = isAdm ? "block" : "none";
+  document.getElementById("addPersonaRow").style.display = isAdm ? "flex" : "none";
+  document.getElementById("notaPersonas").textContent = isAdm
+    ? "Puedes editar a todos. El email vincula cada compañero con su cuenta (debe coincidir con el de su login)."
+    : "Solo puedes editar tu propia fila.";
+
   // personas
-  let ph = "<thead><tr><th>Nombre</th><th>Color</th><th>Días anuales</th><th>Bolsa horas</th><th></th></tr></thead><tbody>";
+  let ph = "<thead><tr><th>Nombre</th><th>Email (cuenta)</th><th>Color</th><th>Días anuales</th><th>Bolsa horas</th><th></th></tr></thead><tbody>";
   state.personas.forEach(p => {
+    const editable = canEdit(p.id);
+    const dis = editable ? "" : "disabled";
+    const emailDis = isAdm ? "" : "disabled"; // el email solo lo gestiona el admin
     ph += `<tr data-id="${p.id}">
-      <td><input class="e-nombre" value="${p.nombre}"></td>
-      <td><input class="e-color" value="${p.color}" maxlength="6" style="width:80px"> <span class="color-dot" style="background:#${p.color}"></span></td>
-      <td><input class="e-dias" type="number" value="${p.dias_anuales}" style="width:70px"></td>
-      <td><input class="e-horas" type="number" value="${p.bolsa_horas}" style="width:70px"></td>
-      <td><button class="ghost-btn sm btn-save-p">Guardar</button> <button class="danger-btn sm btn-del-p">Borrar</button></td>
+      <td><input class="e-nombre" value="${p.nombre}" ${dis}></td>
+      <td><input class="e-email" value="${p.email||""}" placeholder="email@..." style="width:160px" ${emailDis}></td>
+      <td><input class="e-color" value="${p.color}" maxlength="6" style="width:80px" ${dis}> <span class="color-dot" style="background:#${p.color}"></span></td>
+      <td><input class="e-dias" type="number" value="${p.dias_anuales}" style="width:70px" ${dis}></td>
+      <td><input class="e-horas" type="number" value="${p.bolsa_horas}" style="width:70px" ${dis}></td>
+      <td>${editable ? `<button class="ghost-btn sm btn-save-p">Guardar</button>` : ""}${isAdm ? ` <button class="danger-btn sm btn-del-p">Borrar</button>` : ""}</td>
     </tr>`;
   });
   ph += "</tbody>";
@@ -197,11 +282,11 @@ function renderAjustes(){
   tp.querySelectorAll(".btn-save-p").forEach(b => b.onclick = e => guardarPersona(+e.target.closest("tr").dataset.id));
   tp.querySelectorAll(".btn-del-p").forEach(b => b.onclick = e => borrarPersona(+e.target.closest("tr").dataset.id));
 
-  // festivos
+  // festivos (lista visible para todos; añadir/borrar solo admin)
   let fh = "<thead><tr><th>Fecha</th><th>Nombre</th><th></th></tr></thead><tbody>";
   state.festivos.forEach(f => {
     fh += `<tr data-fecha="${f.fecha}"><td>${f.fecha}</td><td>${f.nombre||""}</td>
-      <td><button class="danger-btn sm btn-del-f">Borrar</button></td></tr>`;
+      <td>${isAdm ? `<button class="danger-btn sm btn-del-f">Borrar</button>` : ""}</td></tr>`;
   });
   fh += "</tbody>";
   const tf = document.getElementById("tablaFestivos");
@@ -220,6 +305,7 @@ async function guardarParams(){
   await recargar(); renderAjustes(); toast("Parámetros guardados");
 }
 async function guardarPersona(id){
+  if (!canEdit(id)){ toast("Solo puedes editar tu propia fila."); return; }
   const tr = document.querySelector(`#tablaPersonas tr[data-id="${id}"]`);
   const fields = {
     nombre: tr.querySelector(".e-nombre").value.trim(),
@@ -227,6 +313,7 @@ async function guardarPersona(id){
     dias_anuales: +tr.querySelector(".e-dias").value,
     bolsa_horas:  +tr.querySelector(".e-horas").value
   };
+  if (esAdmin()) fields.email = tr.querySelector(".e-email").value.trim();
   if (!fields.nombre){ toast("El nombre no puede estar vacío"); return; }
   await Store.updatePersona(id, fields);
   await log("persona", `Editado compañero: ${fields.nombre} (${fields.dias_anuales}d / ${fields.bolsa_horas}h)`);
@@ -240,15 +327,17 @@ async function borrarPersona(id){
   await recargar(); renderAjustes(); toast("Compañero borrado");
 }
 async function addPersona(){
+  if (!esAdmin()){ toast("Solo el administrador puede añadir compañeros."); return; }
   const nombre = document.getElementById("npNombre").value.trim();
   if (!nombre){ toast("Pon un nombre"); return; }
+  const email = document.getElementById("npEmail").value.trim();
   const color = (document.getElementById("npColor").value.trim()||"4472C4").replace("#","");
   const dias = +document.getElementById("npDias").value || 22;
   const horas = +document.getElementById("npHoras").value || 0;
   const orden = (state.personas.reduce((m,p)=>Math.max(m,p.orden||0),0))+1;
-  await Store.addPersona({ nombre, color, dias_anuales:dias, bolsa_horas:horas, orden });
+  await Store.addPersona({ nombre, email, color, dias_anuales:dias, bolsa_horas:horas, orden });
   await log("persona", `Añadido compañero: ${nombre}`);
-  document.getElementById("npNombre").value=""; document.getElementById("npColor").value="";
+  document.getElementById("npNombre").value=""; document.getElementById("npEmail").value=""; document.getElementById("npColor").value="";
   await recargar(); renderAjustes(); toast("Compañero añadido");
 }
 async function addFestivo(){
@@ -335,8 +424,21 @@ const tipoSel = () => document.querySelector("input[name=tipo]:checked").value;
 
 function abrirModal(pidPre, fechaPre){
   modalMsg.textContent = "";
-  mPersona.innerHTML = state.personas.map(p=>`<option value="${p.id}">${p.nombre}</option>`).join("");
-  if (pidPre) mPersona.value = pidPre;
+  const mp = miPersona();
+  // No-admin: solo puede operar sobre su propia persona
+  const lista = (Store.usaSupabase && !esAdmin()) ? (mp ? [mp] : []) : state.personas;
+  mPersona.innerHTML = lista.map(p=>`<option value="${p.id}">${p.nombre}</option>`).join("");
+  mPersona.disabled = (Store.usaSupabase && !esAdmin());
+
+  const sinPersona = lista.length === 0;
+  document.getElementById("mGuardar").disabled = sinPersona;
+  document.getElementById("mBorrar").disabled = sinPersona;
+  if (sinPersona){
+    modalMsg.textContent = "Tu cuenta no está vinculada a ningún compañero. Pide al administrador que ponga tu email en Ajustes.";
+  }
+
+  if (pidPre && lista.some(p=>p.id===pidPre)) mPersona.value = pidPre;
+  else if (mp && lista.some(p=>p.id===mp.id)) mPersona.value = mp.id;
   mDesde.value = fechaPre || ymd(state.ajustes.year, mesActual, 1);
   mHasta.value = ""; mHoras.value = "";
   document.querySelector("input[name=tipo][value=X]").checked = true;
@@ -350,6 +452,7 @@ async function guardar(){
   const pid = +mPersona.value;
   const p = personaById(pid);
   const tipo = tipoSel();
+  if (!canEdit(pid)){ modalMsg.textContent = "Solo puedes editar tus propias vacaciones."; return; }
   if (!mDesde.value){ modalMsg.textContent = "Indica la fecha 'Desde'."; return; }
   const fIni = new Date(mDesde.value+"T00:00:00");
   const fFin = mHasta.value ? new Date(mHasta.value+"T00:00:00") : new Date(fIni);
@@ -389,6 +492,7 @@ async function guardar(){
 
 async function borrar(){
   const pid = +mPersona.value, p = personaById(pid);
+  if (!canEdit(pid)){ modalMsg.textContent = "Solo puedes editar tus propias vacaciones."; return; }
   if (!mDesde.value){ modalMsg.textContent = "Indica la fecha 'Desde'."; return; }
   const fIni = new Date(mDesde.value+"T00:00:00");
   const fFin = mHasta.value ? new Date(mHasta.value+"T00:00:00") : new Date(fIni);
@@ -454,6 +558,7 @@ function initEventos(){
   document.getElementById("btnPrev").onclick = () => { mesActual=(mesActual+11)%12; renderCalendario(); };
   document.getElementById("btnNext").onclick = () => { mesActual=(mesActual+1)%12; renderCalendario(); };
   document.getElementById("btnHoy").onclick = () => { const h=new Date(); mesActual=(h.getFullYear()===state.ajustes.year)?h.getMonth():0; renderCalendario(); };
+  document.getElementById("anioPersona").onchange = renderAnio;
 
   // modal pedir
   document.getElementById("btnPedir").onclick = () => abrirModal(null,null);

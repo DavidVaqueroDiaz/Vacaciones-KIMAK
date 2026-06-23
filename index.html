@@ -38,7 +38,7 @@
     <nav class="tabs">
       <button class="tab active" data-tab="calendario">Calendario</button>
       <button class="tab" data-tab="resumen">Resumen</button>
-      <button class="tab" data-tab="ajustes">Ajustes</button>
+      <button class="tab" data-tab="ajustes" id="tabAjustes">Ajustes</button>
       <button class="tab" data-tab="usuarios" id="tabUsuarios" style="display:none;">Usuarios</button>
       <button class="tab" data-tab="registro">Registro</button>
     </nav>
@@ -63,6 +63,14 @@
         <span class="lg"><span class="chip chip-festivo"></span> festivo</span>
         <span class="lg note">· Doble clic en una celda para marcar/editar ese día.</span>
       </div>
+
+      <div class="anio-block">
+        <div class="anio-head">
+          <h3>Vista anual</h3>
+          <label>Ver año de: <select id="anioPersona"></select></label>
+        </div>
+        <div id="anioGrid" class="anio-grid"></div>
+      </div>
     </section>
 
     <!-- ----- RESUMEN ----- -->
@@ -73,8 +81,8 @@
 
     <!-- ----- AJUSTES ----- -->
     <section id="tab-ajustes" class="tab-panel">
-      <div class="ajustes-block">
-        <h3>Parámetros generales</h3>
+      <div class="ajustes-block" id="blockParams">
+        <h3>Parámetros generales <span class="solo-admin">(solo administrador)</span></h3>
         <div class="param-row">
           <label>Año <input type="number" id="ajYear" /></label>
           <label>Máx. personas fuera a la vez <input type="number" id="ajMaxFuera" min="1" /></label>
@@ -85,20 +93,22 @@
 
       <div class="ajustes-block">
         <h3>Compañeros</h3>
+        <p class="muted-note" id="notaPersonas"></p>
         <table id="tablaPersonas" class="cfg-table"></table>
-        <div class="add-row">
+        <div class="add-row" id="addPersonaRow">
           <input type="text" id="npNombre" placeholder="Nombre" />
-          <input type="text" id="npColor" placeholder="Color hex (ej. 4472C4)" maxlength="6" />
+          <input type="email" id="npEmail" placeholder="Email de su cuenta" />
+          <input type="text" id="npColor" placeholder="Color hex" maxlength="6" />
           <input type="number" id="npDias" placeholder="Días" value="22" />
           <input type="number" id="npHoras" placeholder="Horas" value="20" />
           <button id="btnAddPersona" class="primary-btn">+ Añadir compañero</button>
         </div>
       </div>
 
-      <div class="ajustes-block">
-        <h3>Festivos</h3>
+      <div class="ajustes-block" id="blockFestivos">
+        <h3>Festivos <span class="solo-admin">(solo administrador)</span></h3>
         <table id="tablaFestivos" class="cfg-table"></table>
-        <div class="add-row">
+        <div class="add-row" id="addFestivoRow">
           <input type="date" id="nfFecha" />
           <input type="text" id="nfNombre" placeholder="Nombre del festivo" />
           <button id="btnAddFestivo" class="primary-btn">+ Añadir festivo</button>

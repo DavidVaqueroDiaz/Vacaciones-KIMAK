@@ -203,3 +203,28 @@ button{font-family:inherit;}
 .muted-note{font-size:13px;color:#667;margin:0 0 12px;}
 .user-msg{margin-top:12px;font-size:14px;color:var(--rojo);}
 .user-msg.ok{color:#2c6b34;background:#e9f6ec;border:1px solid #bfe3c6;padding:10px 12px;border-radius:8px;}
+.solo-admin{font-size:12px;font-weight:400;color:#8a93a3;}
+
+/* ----- Propiedad de filas ----- */
+.cal-table td.cell.ro{cursor:default;}
+.cal-table td.cell.ro:hover{outline:none;}
+.cal-table tr.fila-mia td.persona-col{box-shadow:inset 3px 0 0 var(--azul2);}
+.yo{color:var(--azul2);font-weight:700;font-size:11px;}
+
+/* ----- Vista anual ----- */
+.anio-block{margin-top:24px;}
+.anio-head{display:flex;align-items:center;gap:18px;flex-wrap:wrap;margin-bottom:12px;}
+.anio-head h3{margin:0;color:var(--azul);}
+.anio-head select{padding:6px;border:1px solid var(--gris-borde);border-radius:6px;}
+.anio-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:14px;}
+.mini-mes{border:1px solid var(--gris-borde);border-radius:10px;background:#fff;padding:10px;}
+.mini-mes h4{margin:0 0 8px;text-align:center;color:#fff;border-radius:6px;padding:5px;font-size:14px;}
+.mini-tabla{border-collapse:collapse;width:100%;table-layout:fixed;}
+.mini-tabla th{font-size:10px;color:#99a;padding:2px 0;font-weight:600;}
+.mini-tabla td{text-align:center;font-size:11px;padding:1px 0;height:22px;}
+.mini-tabla td .d{display:flex;align-items:center;justify-content:center;width:21px;height:21px;border-radius:50%;margin:0 auto;}
+.mini-tabla td.festivo .d{background:var(--festivo);}
+.mini-tabla td.finde .d{color:#b3b9c4;}
+.mini-tabla td.dia-x .d{color:#fff;font-weight:700;}
+.mini-tabla td.dia-m .d{box-shadow:inset 0 0 0 2px currentColor;font-weight:700;}
+.mini-tabla td.dia-h .d{background:#ffe08a;color:#333;font-weight:700;}

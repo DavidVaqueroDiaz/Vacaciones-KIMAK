@@ -74,10 +74,14 @@ ven los administradores indicados en `config.js → adminEmails`).
 
 1. Ejecuta también el script [`supabase-perfiles.sql`](./supabase-perfiles.sql)
    en *SQL Editor* (crea la tabla con la lista de cuentas).
-2. En Supabase: **Authentication → Sign In / Providers → Email**:
+2. Ejecuta el script [`supabase-permisos.sql`](./supabase-permisos.sql) en *SQL
+   Editor* (activa que cada usuario solo pueda editar lo suyo; ver sección
+   "Permisos" más abajo).
+3. En Supabase: **Authentication → Sign In / Providers → Email**:
    - **Activa** *"Allow new users to sign up"* (necesario para crear cuentas desde la app).
-   - **Desactiva** *"Confirm email"* (para que las cuentas funcionen al instante,
-     sin tener que pulsar un enlace en el correo).
+   - **Desactiva** *"Confirm email"* (IMPORTANTE: si lo dejas activado, Supabase
+     limita los emails a unos pocos por hora y verás el error *"email rate limit
+     exceeded"* al crear varias cuentas seguidas).
 3. La **primera cuenta** (la tuya de administrador) créala en
    **Authentication → Users → Add user** y marca *Auto Confirm User*. Usa el mismo
    email que pusiste en `adminEmails`. A partir de ahí ya creas el resto desde la app.
@@ -97,6 +101,21 @@ ven los administradores indicados en `config.js → adminEmails`).
 
 ---
 
+## 🔒 Permisos (quién puede editar qué)
+
+- **Vacaciones:** cada compañero **solo puede marcar/borrar las suyas**. Para que
+  esto funcione, cada ficha de compañero (pestaña *Ajustes*) debe tener el **email
+  de su cuenta**. El administrador lo rellena en la columna *Email*.
+- **Su propia ficha** (días anuales, bolsa de horas, color, nombre): cada uno edita
+  solo la suya.
+- **Parámetros generales, festivos y alta/baja de compañeros:** solo administradores
+  (los emails de `config.js → adminEmails`, que además deben estar en la tabla
+  `admins` de la base de datos — el script `supabase-permisos.sql` ya añade el tuyo).
+- El **administrador** puede editar las vacaciones y fichas de todos (para correcciones).
+
+Esto se aplica tanto en la app como en la base de datos (`supabase-permisos.sql`),
+así que no se puede saltar ni "por las malas".
+
 ## 🗂️ Cómo se usa
 
 - **Calendario**: rejilla de compañeros × días del mes. Flechas ◀ ▶ para cambiar
@@ -104,6 +123,8 @@ ven los administradores indicados en `config.js → adminEmails`).
   - `X` = día entero · `M` = medio día · `nº` = horas de exceso.
   - Findes y festivos se pintan solos y no cuentan. Al pedir un rango se saltan.
   - La fila *Personas fuera* avisa en rojo si se supera el máximo configurado.
+  - Debajo, **Vista anual**: los 12 meses de un vistazo con los días cogidos y los
+    festivos resaltados (puedes elegir de qué compañero ver el año).
 - **Resumen**: días por mes y por persona, días/horas restantes.
 - **Ajustes**: cambiar año, máximo de personas fuera, horas por día, **días y
   bolsa de horas de cada compañero**, añadir/borrar compañeros y festivos.
