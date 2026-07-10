@@ -217,7 +217,7 @@ function renderAnio(){
         else if (esFestivo(f)) cls = "festivo";
         else if (esFinde(y,m,day)) cls = "finde";
         else if (esTardeTurno(p.nombre, semanaCuadrante(y,m,day))) cls = "tarde";
-        html += `<td class='${cls}'><span class='d' style='${style}'>${day}</span></td>`;
+        html += `<td class='${cls}' data-fecha='${f}'><span class='d' style='${style}'>${day}</span></td>`;
         day++;
       }
       html += "</tr>";
@@ -225,6 +225,14 @@ function renderAnio(){
     html += "</tbody></table></div>";
   }
   cont.innerHTML = html;
+
+  // doble clic en un día -> abrir el modal con esa fecha y la persona seleccionada
+  cont.querySelectorAll("td[data-fecha]").forEach(td => {
+    td.addEventListener("dblclick", () => {
+      if (!canEdit(pid)){ toast("Solo puedes editar tus propias vacaciones."); return; }
+      abrirModal(pid, td.dataset.fecha);
+    });
+  });
 }
 
 // ============================================================
