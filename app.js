@@ -185,19 +185,22 @@ function renderCalendario(){
 function populateAnioSelector(){
   const sel = document.getElementById("anioPersona");
   const prev = sel.value;
-  sel.innerHTML = state.personas.map(p => `<option value="${p.id}">${p.nombre}</option>`).join("");
+  sel.innerHTML = `<option value="__todos__">— Todos —</option>` +
+    state.personas.map(p => `<option value="${p.id}">${p.nombre}</option>`).join("");
   const mp = miPersona();
-  const def = (prev && state.personas.some(p=>String(p.id)===prev)) ? prev
+  const def = (prev && (prev === "__todos__" || state.personas.some(p=>String(p.id)===prev))) ? prev
             : (mp ? String(mp.id) : (state.personas[0] ? String(state.personas[0].id) : ""));
   if (def) sel.value = def;
 }
 function renderAnio(){
   const sel = document.getElementById("anioPersona");
-  const pid = +sel.value;
-  const p = personaById(pid);
+  const modoTodos = sel.value === "__todos__";
+  const pid = modoTodos ? null : +sel.value;
+  const p = modoTodos ? null : personaById(pid);
   const cont = document.getElementById("anioGrid");
-  if (!p){ cont.innerHTML = ""; return; }
+  if (!modoTodos && !p){ cont.innerHTML = ""; return; }
   const y = state.ajustes.year;
+  const hoyStr = fmt(new Date());
   let html = "";
   for (let m=0; m<12; m++){
     html += `<div class='mini-mes'><h4 style='background:#${MESCOLORS[m]}'>${MESES[m]}</h4>`;
@@ -209,15 +212,39 @@ function renderAnio(){
       for (let c=0; c<7; c++){
         if ((row===0 && c<first) || day>nd){ html += "<td></td>"; continue; }
         const f = ymd(y,m,day);
-        const v = state.marcas.get(key(pid,f));
-        let cls = "", style = "";
-        if (v === "X"){ cls = "dia-x"; style = `background:#${p.color}`; }
-        else if (v === "M"){ cls = "dia-m"; style = `color:#${p.color}`; }
-        else if (v !== undefined && v !== ""){ cls = "dia-h"; }
-        else if (esFestivo(f)) cls = "festivo";
-        else if (esFinde(y,m,day)) cls = "finde";
-        else if (esTardeTurno(p.nombre, semanaCuadrante(y,m,day))) cls = "tarde";
-        html += `<td class='${cls}' data-fecha='${f}'><span class='d' style='${style}'>${day}</span></td>`;
+        let cls = "", style = "", title = "";
+        if (modoTodos){
+          // ¿Quién tiene vacaciones (X o M) este día?
+          const quienes = state.personas.filter(px => {
+            const v = state.marcas.get(key(px.id,f));
+            return v === "X" || v === "M";
+          });
+          if (quienes.length){
+            cls = "dia-x";
+            title = quienes.map(q=>q.nombre).join(", ");
+            if (quienes.length === 1){
+              style = `background:#${quienes[0].color}`;
+            } else if (quienes.length === 2){
+              style = `background:linear-gradient(90deg,#${quienes[0].color} 0 50%,#${quienes[1].color} 50% 100%)`;
+            } else {
+              const segs = quienes.map((q,i) =>
+                `#${q.color} ${Math.round(i*360/quienes.length)}deg ${Math.round((i+1)*360/quienes.length)}deg`).join(",");
+              style = `background:conic-gradient(${segs})`;
+            }
+          }
+          else if (esFestivo(f)) cls = "festivo";
+          else if (esFinde(y,m,day)) cls = "finde";
+        } else {
+          const v = state.marcas.get(key(pid,f));
+          if (v === "X"){ cls = "dia-x"; style = `background:#${p.color}`; }
+          else if (v === "M"){ cls = "dia-m"; style = `color:#${p.color}`; }
+          else if (v !== undefined && v !== ""){ cls = "dia-h"; }
+          else if (esFestivo(f)) cls = "festivo";
+          else if (esFinde(y,m,day)) cls = "finde";
+          else if (esTardeTurno(p.nombre, semanaCuadrante(y,m,day))) cls = "tarde";
+        }
+        if (f === hoyStr) cls += " hoy";
+        html += `<td class='${cls}' data-fecha='${f}'${title ? ` title="${title}"` : ""}><span class='d' style='${style}'>${day}</span></td>`;
         day++;
       }
       html += "</tr>";
@@ -226,9 +253,14 @@ function renderAnio(){
   }
   cont.innerHTML = html;
 
-  // doble clic en un día -> abrir el modal con esa fecha y la persona seleccionada
+  // doble clic en un día -> abrir el modal con esa fecha
   cont.querySelectorAll("td[data-fecha]").forEach(td => {
     td.addEventListener("dblclick", () => {
+      if (modoTodos){
+        const mp = miPersona();
+        abrirModal(mp ? mp.id : null, td.dataset.fecha);
+        return;
+      }
       if (!canEdit(pid)){ toast("Solo puedes editar tus propias vacaciones."); return; }
       abrirModal(pid, td.dataset.fecha);
     });
