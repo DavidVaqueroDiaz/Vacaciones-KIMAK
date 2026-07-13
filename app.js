@@ -187,10 +187,9 @@ function populateAnioSelector(){
   const prev = sel.value;
   sel.innerHTML = `<option value="__todos__">— Todos —</option>` +
     state.personas.map(p => `<option value="${p.id}">${p.nombre}</option>`).join("");
-  const mp = miPersona();
-  const def = (prev && (prev === "__todos__" || state.personas.some(p=>String(p.id)===prev))) ? prev
-            : (mp ? String(mp.id) : (state.personas[0] ? String(state.personas[0].id) : ""));
-  if (def) sel.value = def;
+  // Por defecto se muestra "Todos"; si el usuario ya eligió algo, se respeta.
+  const def = (prev && (prev === "__todos__" || state.personas.some(p=>String(p.id)===prev))) ? prev : "__todos__";
+  sel.value = def;
 }
 function renderAnio(){
   const sel = document.getElementById("anioPersona");
