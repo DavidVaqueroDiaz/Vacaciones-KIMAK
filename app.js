@@ -16,6 +16,14 @@ const state = {
 };
 let mesActual = 0;
 
+// ---------- seguridad: nunca insertar texto de la BD sin escapar ----------
+// Evita que alguien pueda inyectar HTML o JavaScript a través de un nombre,
+// un email o cualquier otro dato guardado (XSS).
+const ESCAPES = { "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" };
+const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ESCAPES[c]);
+// Solo se admiten colores hexadecimales de 6 dígitos; si no, uno por defecto.
+const hex = c => /^[0-9A-Fa-f]{6}$/.test(String(c || "")) ? String(c) : "4472C4";
+
 // ---------- utilidades fecha ----------
 const pad = n => String(n).padStart(2,"0");
 const ymd = (y,m,d) => `${y}-${pad(m+1)}-${pad(d)}`;
@@ -149,15 +157,15 @@ function renderCalendario(){
     const editable = canEdit(p.id);
     const mp = miPersona();
     const esMia = mp && mp.id === p.id;
-    html += `<tr class='${esMia?"fila-mia":""}'><td class='persona-col'><span class='color-dot' style='background:#${p.color}'></span>${p.nombre}${esMia?" <span class='yo'>(tú)</span>":""}</td>`;
+    html += `<tr class='${esMia?"fila-mia":""}'><td class='persona-col'><span class='color-dot' style='background:#${hex(p.color)}'></span>${esc(p.nombre)}${esMia?" <span class='yo'>(tú)</span>":""}</td>`;
     for (let d=1; d<=nd; d++){
       const f = ymd(y,m,d);
       const v = state.marcas.get(key(p.id, f));
       let cls = "cell" + (editable ? "" : " ro"), style = "", txt = "";
       if (v !== undefined && v !== ""){
-        txt = v;
-        if (v === "X") style = `background:#${p.color};color:#fff;`;
-        else if (v === "M") style = `background:linear-gradient(135deg,#${p.color} 50%,#fff 50%);color:#${p.color};`;
+        txt = esc(v);
+        if (v === "X") style = `background:#${hex(p.color)};color:#fff;`;
+        else if (v === "M") style = `background:linear-gradient(135deg,#${hex(p.color)} 50%,#fff 50%);color:#${hex(p.color)};`;
         else style = "background:#ffe08a;color:#333;";
       } else if (esFestivo(f)) cls += " festivo";
       else if (esFinde(y,m,d)) cls += " finde";
@@ -195,7 +203,7 @@ function populateAnioSelector(){
   const sel = document.getElementById("anioPersona");
   const prev = sel.value;
   sel.innerHTML = `<option value="__todos__">— Todos —</option>` +
-    state.personas.map(p => `<option value="${p.id}">${p.nombre}</option>`).join("");
+    state.personas.map(p => `<option value="${p.id}">${esc(p.nombre)}</option>`).join("");
   // Por defecto se muestra "Todos"; si el usuario ya eligió algo, se respeta.
   const def = (prev && (prev === "__todos__" || state.personas.some(p=>String(p.id)===prev))) ? prev : "__todos__";
   sel.value = def;
@@ -229,14 +237,14 @@ function renderAnio(){
           });
           if (quienes.length){
             cls = "dia-x";
-            title = quienes.map(q=>q.nombre).join(", ");
+            title = esc(quienes.map(q=>q.nombre).join(", "));
             if (quienes.length === 1){
-              style = `background:#${quienes[0].color}`;
+              style = `background:#${hex(quienes[0].color)}`;
             } else if (quienes.length === 2){
-              style = `background:linear-gradient(90deg,#${quienes[0].color} 0 50%,#${quienes[1].color} 50% 100%)`;
+              style = `background:linear-gradient(90deg,#${hex(quienes[0].color)} 0 50%,#${hex(quienes[1].color)} 50% 100%)`;
             } else {
               const segs = quienes.map((q,i) =>
-                `#${q.color} ${Math.round(i*360/quienes.length)}deg ${Math.round((i+1)*360/quienes.length)}deg`).join(",");
+                `#${hex(q.color)} ${Math.round(i*360/quienes.length)}deg ${Math.round((i+1)*360/quienes.length)}deg`).join(",");
               style = `background:conic-gradient(${segs})`;
             }
           }
@@ -244,8 +252,8 @@ function renderAnio(){
           else if (esFinde(y,m,day)) cls = "finde";
         } else {
           const v = state.marcas.get(key(pid,f));
-          if (v === "X"){ cls = "dia-x"; style = `background:#${p.color}`; }
-          else if (v === "M"){ cls = "dia-m"; style = `color:#${p.color}`; }
+          if (v === "X"){ cls = "dia-x"; style = `background:#${hex(p.color)}`; }
+          else if (v === "M"){ cls = "dia-m"; style = `color:#${hex(p.color)}`; }
           else if (v !== undefined && v !== ""){ cls = "dia-h"; }
           else if (esFestivo(f)) cls = "festivo";
           else if (esFinde(y,m,day)) cls = "finde";
@@ -295,7 +303,7 @@ function renderResumen(){
   html += "<th class='sep'>Días tot.</th><th>Asig.</th><th>Rest.</th><th class='sep'>Horas usad.</th><th>Bolsa</th><th>Rest.</th></tr></thead><tbody>";
   state.personas.forEach(p => {
     const a = acc[p.id];
-    html += `<tr><td class='nombre'><span class='color-dot' style='background:#${p.color}'></span>${p.nombre}</td>`;
+    html += `<tr><td class='nombre'><span class='color-dot' style='background:#${hex(p.color)}'></span>${esc(p.nombre)}</td>`;
     a.mes.forEach(x => html += `<td>${x||""}</td>`);
     const rest = p.dias_anuales - a.dias, hrest = p.bolsa_horas - a.horas;
     html += `<td class='sep'><b>${a.dias}</b></td><td>${p.dias_anuales}</td><td class='${rest<0?"neg":""}'>${rest}</td>`;
@@ -349,10 +357,10 @@ function renderAjustes(){
     const turnoAct = (p.turno||"").toLowerCase();
     const opts = TURNOS.map(o => `<option value="${o.v}"${o.v===turnoAct?" selected":""}>${o.t}</option>`).join("");
     ph += `<tr data-id="${p.id}">
-      <td><input class="e-nombre" value="${p.nombre}" ${dis}></td>
-      <td><input class="e-email" value="${p.email||""}" placeholder="email@..." style="width:160px" ${emailDis}></td>
+      <td><input class="e-nombre" value="${esc(p.nombre)}" ${dis}></td>
+      <td><input class="e-email" value="${esc(p.email||"")}" placeholder="email@..." style="width:160px" ${emailDis}></td>
       <td><select class="e-turno" ${emailDis}>${opts}</select></td>
-      <td><input class="e-color" value="${p.color}" maxlength="6" style="width:80px" ${dis}> <span class="color-dot" style="background:#${p.color}"></span></td>
+      <td><input class="e-color" value="${esc(p.color)}" maxlength="6" style="width:80px" ${dis}> <span class="color-dot" style="background:#${hex(p.color)}"></span></td>
       <td><input class="e-dias" type="number" value="${p.dias_anuales}" style="width:70px" ${dis}></td>
       <td><input class="e-horas" type="number" value="${p.bolsa_horas}" style="width:70px" ${dis}></td>
       <td>${editable ? `<button class="ghost-btn sm btn-save-p">Guardar</button>` : ""}${isAdm ? ` <button class="danger-btn sm btn-del-p">Borrar</button>` : ""}</td>
@@ -367,7 +375,7 @@ function renderAjustes(){
   // festivos (lista visible para todos; añadir/borrar solo admin)
   let fh = "<thead><tr><th>Fecha</th><th>Nombre</th><th></th></tr></thead><tbody>";
   state.festivos.forEach(f => {
-    fh += `<tr data-fecha="${f.fecha}"><td>${f.fecha}</td><td>${f.nombre||""}</td>
+    fh += `<tr data-fecha="${esc(f.fecha)}"><td>${esc(f.fecha)}</td><td>${esc(f.nombre||"")}</td>
       <td>${isAdm ? `<button class="danger-btn sm btn-del-f">Borrar</button>` : ""}</td></tr>`;
   });
   fh += "</tbody>";
@@ -449,7 +457,7 @@ async function renderLogs(){
   if (!logs.length) html += "<tr><td colspan='4'>Sin registros todavía.</td></tr>";
   logs.forEach(l => {
     const fecha = new Date(l.ts).toLocaleString("es-ES");
-    html += `<tr><td>${fecha}</td><td>${l.usuario||""}</td><td>${l.accion}</td><td style="text-align:left">${l.detalle||""}</td></tr>`;
+    html += `<tr><td>${esc(fecha)}</td><td>${esc(l.usuario||"")}</td><td>${esc(l.accion)}</td><td style="text-align:left">${esc(l.detalle||"")}</td></tr>`;
   });
   html += "</tbody>";
   document.getElementById("tablaLogs").innerHTML = html;
@@ -482,7 +490,7 @@ async function crearUsuario(){
   msg.className = "user-msg ok";
   msg.innerHTML = r.needsConfirm
     ? `⚠️ Cuenta creada, pero Supabase pide <b>confirmar el email</b>. Desactiva esa opción (ver instrucciones) para que pueda entrar directamente.`
-    : `✅ Cuenta creada. Comparte estos datos:<br><b>Email:</b> ${email} &nbsp; <b>Contraseña:</b> ${pass}`;
+    : `✅ Cuenta creada. Comparte estos datos:<br><b>Email:</b> ${esc(email)} &nbsp; <b>Contraseña:</b> ${esc(pass)}`;
   document.getElementById("nuEmail").value = ""; document.getElementById("nuPass").value = "";
   renderUsuarios();
 }
@@ -490,7 +498,7 @@ async function renderUsuarios(){
   const perfiles = await Store.loadPerfiles();
   let html = "<thead><tr><th>Email</th><th>Creada</th></tr></thead><tbody>";
   if (!perfiles.length) html += "<tr><td colspan='2'>Aún no has creado cuentas desde aquí.</td></tr>";
-  perfiles.forEach(p => html += `<tr><td>${p.email}</td><td>${p.creado?new Date(p.creado).toLocaleString("es-ES"):""}</td></tr>`);
+  perfiles.forEach(p => html += `<tr><td>${esc(p.email)}</td><td>${esc(p.creado?new Date(p.creado).toLocaleString("es-ES"):"")}</td></tr>`);
   html += "</tbody>";
   document.getElementById("tablaUsuarios").innerHTML = html;
 }
@@ -512,7 +520,7 @@ function abrirModal(pidPre, fechaPre){
   const mp = miPersona();
   // No-admin: solo puede operar sobre su propia persona
   const lista = (Store.usaSupabase && !esAdmin()) ? (mp ? [mp] : []) : state.personas;
-  mPersona.innerHTML = lista.map(p=>`<option value="${p.id}">${p.nombre}</option>`).join("");
+  mPersona.innerHTML = lista.map(p=>`<option value="${p.id}">${esc(p.nombre)}</option>`).join("");
   mPersona.disabled = (Store.usaSupabase && !esAdmin());
 
   const sinPersona = lista.length === 0;

@@ -3,6 +3,9 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <!-- Capa extra de seguridad: el navegador solo ejecuta scripts de esta web y
+       de Supabase, y solo permite conexiones a Supabase. Bloquea inyecciones. -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; connect-src https://*.supabase.co wss://*.supabase.co; img-src 'self' data:; font-src 'self'; form-action 'none'; base-uri 'none'; frame-ancestors 'none'" />
   <title>Calendario de Vacaciones</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
