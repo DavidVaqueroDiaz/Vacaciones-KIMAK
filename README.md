@@ -68,7 +68,8 @@ Son 3 pasos. La primera vez lleva unos 15 minutos; luego ya no se toca.
 ## 👤 Cuentas de usuario
 
 Las cuentas se crean **desde la propia app**, en la pestaña **Usuarios** (solo la
-ven los administradores indicados en `config.js → adminEmails`).
+ven los administradores, que son los que figuran en la tabla `admins` de la base
+de datos — **no hay ningún email en el código**).
 
 ### Preparativos (una sola vez)
 
@@ -76,15 +77,23 @@ ven los administradores indicados en `config.js → adminEmails`).
    en *SQL Editor* (crea la tabla con la lista de cuentas).
 2. Ejecuta el script [`supabase-permisos.sql`](./supabase-permisos.sql) en *SQL
    Editor* (activa que cada usuario solo pueda editar lo suyo; ver sección
-   "Permisos" más abajo).
-3. En Supabase: **Authentication → Sign In / Providers → Email**:
-   - **Activa** *"Allow new users to sign up"* (necesario para crear cuentas desde la app).
+   "Permisos" más abajo). **Cambia el correo de ejemplo por el tuyo** antes de
+   ejecutarlo: ese será el administrador.
+3. Ejecuta [`supabase-turnos.sql`](./supabase-turnos.sql) (añade el campo del
+   turno de tarde a cada persona).
+4. En Supabase: **Authentication → Sign In / Providers → Email**:
+   - **Activa** *"Allow new users to sign up"* (necesario para crear cuentas desde
+     la app). Recomendado: desactívalo cuando ya tengas todas las cuentas creadas.
    - **Desactiva** *"Confirm email"* (IMPORTANTE: si lo dejas activado, Supabase
      limita los emails a unos pocos por hora y verás el error *"email rate limit
      exceeded"* al crear varias cuentas seguidas).
-3. La **primera cuenta** (la tuya de administrador) créala en
+5. La **primera cuenta** (la tuya de administrador) créala en
    **Authentication → Users → Add user** y marca *Auto Confirm User*. Usa el mismo
-   email que pusiste en `adminEmails`. A partir de ahí ya creas el resto desde la app.
+   email que pusiste en la tabla `admins`. A partir de ahí ya creas el resto desde
+   la app.
+
+> Para añadir otro administrador más adelante:
+> `insert into admins (email) values ('correo@ejemplo.com');`
 
 ### Crear cuentas desde la app
 
@@ -108,13 +117,19 @@ ven los administradores indicados en `config.js → adminEmails`).
   de su cuenta**. El administrador lo rellena en la columna *Email*.
 - **Su propia ficha** (días anuales, bolsa de horas, color, nombre): cada uno edita
   solo la suya.
-- **Parámetros generales, festivos y alta/baja de compañeros:** solo administradores
-  (los emails de `config.js → adminEmails`, que además deben estar en la tabla
-  `admins` de la base de datos — el script `supabase-permisos.sql` ya añade el tuyo).
+- **Parámetros generales, festivos, turnos y alta/baja de compañeros:** solo
+  administradores (los correos de la tabla `admins` de la base de datos).
 - El **administrador** puede editar las vacaciones y fichas de todos (para correcciones).
 
 Esto se aplica tanto en la app como en la base de datos (`supabase-permisos.sql`),
 así que no se puede saltar ni "por las malas".
+
+### Nota sobre el código y los datos
+
+El repositorio no contiene ningún nombre ni correo real: los datos de las personas
+viven solo en la base de datos, protegida por login. La clave `publishable` que
+aparece en `config.js` está pensada para ir en el navegador y sin una cuenta válida
+no da acceso a nada.
 
 ## 🗂️ Cómo se usa
 

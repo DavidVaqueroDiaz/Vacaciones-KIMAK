@@ -65,14 +65,15 @@ create policy "auth_read_logs"   on logs for select to authenticated using (true
 create policy "auth_insert_logs" on logs for insert to authenticated with check (true);
 
 -- ---------- DATOS INICIALES (solo se cargan si las tablas están vacías) ----------
+-- Nombres de ejemplo: cámbialos luego desde la pestaña "Ajustes" de la app.
 insert into personas (nombre,color,dias_anuales,bolsa_horas,orden)
 select * from (values
-  ('Jose Angel','1F77B4',22,20,1),
-  ('David Vaquero','E15759',22,20,2),
-  ('Carlos Pernas','59A14F',22,20,3),
-  ('Diego Ponte','F28E2B',22,20,4),
-  ('Joel Feijoo','AF7AA1',22,20,5),
-  ('Javier Orosa','4E79A7',22,20,6)
+  ('Compañero 1','1F77B4',22,20,1),
+  ('Compañero 2','E15759',22,20,2),
+  ('Compañero 3','59A14F',22,20,3),
+  ('Compañero 4','F28E2B',22,20,4),
+  ('Compañero 5','AF7AA1',22,20,5),
+  ('Compañero 6','4E79A7',22,20,6)
 ) as v(nombre,color,dias_anuales,bolsa_horas,orden)
 where not exists (select 1 from personas);
 

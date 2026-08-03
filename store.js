@@ -51,6 +51,17 @@ window.Store = (() => {
   }
   function onAuthChange(cb){ if (usaSupabase) sb.auth.onAuthStateChange((_e,s)=>cb(s?s.user:null)); }
 
+  // ¿La cuenta actual es administradora? Se comprueba contra la tabla "admins"
+  // de la base de datos (la misma que aplica los permisos del servidor).
+  async function isAdmin(){
+    if (!usaSupabase) return true; // modo local de prueba
+    const u = await getUser();
+    if (!u || !u.email) return false;
+    const { data, error } = await sb.from("admins").select("email").ilike("email", u.email);
+    if (error){ console.error(error); return false; }
+    return (data||[]).length > 0;
+  }
+
   // Crea una cuenta sin cerrar la sesión del administrador.
   // Usa un cliente auxiliar aislado (no guarda sesión) para el registro.
   async function createUser(email, password){
@@ -196,7 +207,7 @@ window.Store = (() => {
 
   return {
     usaSupabase,
-    getUser, login, logout, changePassword, onAuthChange, createUser,
+    getUser, login, logout, changePassword, onAuthChange, createUser, isAdmin,
     loadAll, addPersona, updatePersona, deletePersona,
     setAjustes, addFestivo, deleteFestivo,
     setMarca, delMarca, addLog, loadLogs,

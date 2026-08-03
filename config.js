@@ -15,19 +15,16 @@ window.APP_CONFIG = {
   supabaseUrl:     "https://shtncekxervxerdlssat.supabase.co",
   supabaseAnonKey: "sb_publishable__NCDfRPV6-PqH0-CdpAcpw_q_B7KLSS",
 
-  // Emails que pueden ver el panel de Administración (crear cuentas).
-  // Añade aquí en minúsculas los correos que quieras que sean administradores.
-  adminEmails: ["davidvaquero94@gmail.com", "jsomoza@kimak.com"],
+  // Quién es administrador se decide en la tabla "admins" de la base de datos
+  // (Supabase), no aquí. Así no hay ningún email personal en el código público.
+  // Para añadir un admin:  insert into admins (email) values ('correo@ejemplo.com');
 
   // ---- TURNOS DE TARDE (se pintan en gris claro en la Vista anual) ----
-  // El sistema lo calcula solo a partir de este patrón; no hay que marcar nada a mano.
+  // El turno de cada persona se guarda en la base de datos (columna "turno" de
+  // la tabla personas) y se edita desde la pestaña "Ajustes". Aquí solo se
+  // indica desde qué lunes empieza a contar la "Semana 1" del cuadrante.
   turnos: {
-    anchorMonday: "2026-01-05",   // lunes de la "Semana 1" del cuadrante
-    // Ciclo de 3 semanas del trío: quién está de TARDE en la semana 1, 2 y 3 (y se repite)
-    cicloTarde: ["Carlos Pernas", "David Vaquero", "Jose Angel"],
-    // Personas que alternan mañana/tarde cada semana y están de TARDE en semanas PARES
-    alternosTardeSemanaPar: ["Javier Orosa"]
-    // (Diego Ponte, Joel Feijoo y José Somoza tienen turno fijo: no se marcan)
+    anchorMonday: "2026-01-05"
   },
 
   // --- Valores por defecto SOLO para el modo local de prueba ---
@@ -37,12 +34,12 @@ window.APP_CONFIG = {
     maxFuera:    2,
     horasPorDia: 8,
     personas: [
-      { nombre: "Jose Angel",    color: "1F77B4", dias_anuales: 22, bolsa_horas: 20 },
-      { nombre: "David Vaquero", color: "E15759", dias_anuales: 22, bolsa_horas: 20 },
-      { nombre: "Carlos Pernas", color: "59A14F", dias_anuales: 22, bolsa_horas: 20 },
-      { nombre: "Diego Ponte",   color: "F28E2B", dias_anuales: 22, bolsa_horas: 20 },
-      { nombre: "Joel Feijoo",   color: "AF7AA1", dias_anuales: 22, bolsa_horas: 20 },
-      { nombre: "Javier Orosa",  color: "4E79A7", dias_anuales: 22, bolsa_horas: 20 }
+      { nombre: "Compañero 1", color: "1F77B4", dias_anuales: 22, bolsa_horas: 20, turno: "ciclo3" },
+      { nombre: "Compañero 2", color: "E15759", dias_anuales: 22, bolsa_horas: 20, turno: "ciclo2" },
+      { nombre: "Compañero 3", color: "59A14F", dias_anuales: 22, bolsa_horas: 20, turno: "ciclo1" },
+      { nombre: "Compañero 4", color: "F28E2B", dias_anuales: 22, bolsa_horas: 20, turno: "" },
+      { nombre: "Compañero 5", color: "AF7AA1", dias_anuales: 22, bolsa_horas: 20, turno: "" },
+      { nombre: "Compañero 6", color: "4E79A7", dias_anuales: 22, bolsa_horas: 20, turno: "par" }
     ],
     festivos: [
       { fecha: "2026-01-01", nombre: "Año Nuevo" },

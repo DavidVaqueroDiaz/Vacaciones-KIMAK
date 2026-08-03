@@ -11,7 +11,8 @@ const state = {
   ajustes: { year:2026, max_fuera:2, horas_por_dia:8 },
   festivosSet: new Set(),  // "AAAA-MM-DD"
   festivos: [],            // [{fecha,nombre}]
-  marcas: new Map()        // "personaId|fecha" -> valor
+  marcas: new Map(),       // "personaId|fecha" -> valor
+  esAdminFlag: false       // se resuelve contra la tabla "admins" al entrar
 };
 let mesActual = 0;
 
@@ -50,10 +51,10 @@ async function routeAuth(){
 }
 
 let arrancada = false;
+// Se resuelve contra la tabla "admins" de la base de datos al entrar (ver arrancarApp)
 function esAdmin(){
   if (!Store.usaSupabase) return true; // en modo local de prueba todo está permitido
-  const admins = (window.APP_CONFIG.adminEmails||[]).map(e=>e.toLowerCase());
-  return state.user && admins.includes((state.user.email||"").toLowerCase());
+  return state.esAdminFlag === true;
 }
 const emailActual = () => (state.user && state.user.email ? state.user.email : "").toLowerCase();
 // Persona vinculada a la cuenta actual (por email). En modo local no aplica.
@@ -81,19 +82,27 @@ function semanaCuadrante(y,m,d){
   const lunes = new Date(fecha); lunes.setDate(fecha.getDate() - ((fecha.getDay()+6)%7)); // lunes de esa semana
   return Math.round((lunes - anchor)/(7*86400000)) + 1;
 }
-// ¿La persona (por nombre) está de turno de tarde en esa semana?
-function esTardeTurno(nombre, semana){
-  const t = window.APP_CONFIG.turnos;
-  if (!t || semana < 1) return false;
-  if ((t.cicloTarde||[]).includes(nombre)){
-    const idx = ((semana-1)%3 + 3) % 3;
-    return t.cicloTarde[idx] === nombre;
+// ¿Esta persona está de turno de tarde en esa semana?
+// El patrón lo lleva cada persona en su campo "turno" (se edita en Ajustes):
+//   ciclo1 / ciclo2 / ciclo3 -> tarde en esa semana del ciclo de 3, repitiendo
+//   par                      -> alterna: tarde en las semanas pares
+//   impar                    -> alterna: tarde en las semanas impares
+//   (vacío)                  -> turno fijo, no se marca nada
+function esTardeTurno(persona, semana){
+  const turno = (persona && persona.turno ? String(persona.turno) : "").trim().toLowerCase();
+  if (!turno || semana < 1) return false;
+  if (turno.startsWith("ciclo")){
+    const n = parseInt(turno.slice(5), 10);
+    if (!n) return false;
+    return (((semana - 1) % 3) + 3) % 3 === (n - 1);
   }
-  if ((t.alternosTardeSemanaPar||[]).includes(nombre)) return semana % 2 === 0;
+  if (turno === "par")   return semana % 2 === 0;
+  if (turno === "impar") return semana % 2 === 1;
   return false;
 }
 
 async function arrancarApp(){
+  state.esAdminFlag = await Store.isAdmin();   // antes de pintar nada
   document.getElementById("userEmail").textContent = state.user ? state.user.email : "";
   document.getElementById("btnLogout").style.display = Store.usaSupabase ? "inline-block" : "none";
   document.getElementById("btnPass").style.display   = Store.usaSupabase ? "inline-block" : "none";
@@ -240,7 +249,7 @@ function renderAnio(){
           else if (v !== undefined && v !== ""){ cls = "dia-h"; }
           else if (esFestivo(f)) cls = "festivo";
           else if (esFinde(y,m,day)) cls = "finde";
-          else if (esTardeTurno(p.nombre, semanaCuadrante(y,m,day))) cls = "tarde";
+          else if (esTardeTurno(p, semanaCuadrante(y,m,day))) cls = "tarde";
         }
         if (f === hoyStr) cls += " hoy";
         html += `<td class='${cls}' data-fecha='${f}'${title ? ` title="${title}"` : ""}><span class='d' style='${style}'>${day}</span></td>`;
@@ -324,14 +333,25 @@ function renderAjustes(){
     : "Solo puedes editar tu propia fila.";
 
   // personas
-  let ph = "<thead><tr><th>Nombre</th><th>Email (cuenta)</th><th>Color</th><th>Días anuales</th><th>Bolsa horas</th><th></th></tr></thead><tbody>";
+  const TURNOS = [
+    { v:"",       t:"Fijo (no marcar)" },
+    { v:"ciclo1", t:"Tarde: sem. 1 de 3" },
+    { v:"ciclo2", t:"Tarde: sem. 2 de 3" },
+    { v:"ciclo3", t:"Tarde: sem. 3 de 3" },
+    { v:"par",    t:"Alterna: semanas pares" },
+    { v:"impar",  t:"Alterna: semanas impares" }
+  ];
+  let ph = "<thead><tr><th>Nombre</th><th>Email (cuenta)</th><th>Turno de tarde</th><th>Color</th><th>Días anuales</th><th>Bolsa horas</th><th></th></tr></thead><tbody>";
   state.personas.forEach(p => {
     const editable = canEdit(p.id);
     const dis = editable ? "" : "disabled";
-    const emailDis = isAdm ? "" : "disabled"; // el email solo lo gestiona el admin
+    const emailDis = isAdm ? "" : "disabled"; // el email y el turno solo los gestiona el admin
+    const turnoAct = (p.turno||"").toLowerCase();
+    const opts = TURNOS.map(o => `<option value="${o.v}"${o.v===turnoAct?" selected":""}>${o.t}</option>`).join("");
     ph += `<tr data-id="${p.id}">
       <td><input class="e-nombre" value="${p.nombre}" ${dis}></td>
       <td><input class="e-email" value="${p.email||""}" placeholder="email@..." style="width:160px" ${emailDis}></td>
+      <td><select class="e-turno" ${emailDis}>${opts}</select></td>
       <td><input class="e-color" value="${p.color}" maxlength="6" style="width:80px" ${dis}> <span class="color-dot" style="background:#${p.color}"></span></td>
       <td><input class="e-dias" type="number" value="${p.dias_anuales}" style="width:70px" ${dis}></td>
       <td><input class="e-horas" type="number" value="${p.bolsa_horas}" style="width:70px" ${dis}></td>
@@ -375,7 +395,10 @@ async function guardarPersona(id){
     dias_anuales: +tr.querySelector(".e-dias").value,
     bolsa_horas:  +tr.querySelector(".e-horas").value
   };
-  if (esAdmin()) fields.email = tr.querySelector(".e-email").value.trim();
+  if (esAdmin()){
+    fields.email = tr.querySelector(".e-email").value.trim();
+    fields.turno = tr.querySelector(".e-turno").value;
+  }
   if (!fields.nombre){ toast("El nombre no puede estar vacío"); return; }
   await Store.updatePersona(id, fields);
   await log("persona", `Editado compañero: ${fields.nombre} (${fields.dias_anuales}d / ${fields.bolsa_horas}h)`);

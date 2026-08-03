@@ -9,7 +9,8 @@ alter table personas add column if not exists email text;
 
 -- 2) Tabla de administradores (pon aquí los emails admin)
 create table if not exists admins ( email text primary key );
-insert into admins (email) values ('davidvaquero94@gmail.com') on conflict do nothing;
+-- Cambia este correo por el tuyo antes de ejecutar (y añade una línea por cada admin)
+insert into admins (email) values ('CAMBIA_ESTO@ejemplo.com') on conflict do nothing;
 alter table admins enable row level security;
 drop policy if exists "admins_read" on admins;
 create policy "admins_read" on admins for select to authenticated using (true);
