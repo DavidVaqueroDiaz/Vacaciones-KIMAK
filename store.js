@@ -55,6 +55,13 @@ window.Store = (() => {
   // de la base de datos (la misma que aplica los permisos del servidor).
   async function isAdmin(){
     if (!usaSupabase) return true; // modo local de prueba
+    // Vía preferente: función is_admin() del servidor. No hace falta poder leer
+    // la tabla admins, así que la lista de administradores puede quedar cerrada.
+    try {
+      const { data, error } = await sb.rpc("is_admin");
+      if (!error) return data === true;
+    } catch(e){ /* seguimos con la vía de reserva */ }
+    // Reserva: preguntar por el propio correo (funciona si admins es legible)
     const u = await getUser();
     if (!u || !u.email) return false;
     const { data, error } = await sb.from("admins").select("email").ilike("email", u.email);
