@@ -11,11 +11,12 @@ window.Store = (() => {
 
   // -------- helpers localStorage --------
   const LS = {
-    personas: "vac_personas",
-    ajustes:  "vac_ajustes",
-    festivos: "vac_festivos",
-    marcas:   "vac_marcas",
-    logs:     "vac_logs"
+    personas:      "vac_personas",
+    ajustes:       "vac_ajustes",
+    festivos:      "vac_festivos",
+    marcas:        "vac_marcas",
+    logs:          "vac_logs",
+    departamentos: "vac_departamentos"
   };
   const lsGet = (k, def) => { const r = localStorage.getItem(k); return r ? JSON.parse(r) : def; };
   const lsSet = (k, v) => localStorage.setItem(k, JSON.stringify(v));
@@ -23,6 +24,7 @@ window.Store = (() => {
   function seedLocalSiHaceFalta(){
     if (localStorage.getItem(LS.personas)) return;
     const d = CFG.defaults;
+    lsSet(LS.departamentos, (d.departamentos||[]).map((x,i) => ({ id:i+1, orden:i+1, ...x })));
     lsSet(LS.personas, d.personas.map((p,i) => ({ id:i+1, orden:i+1, ...p })));
     lsSet(LS.ajustes,  { year:d.year, max_fuera:d.maxFuera, horas_por_dia:d.horasPorDia });
     lsSet(LS.festivos, d.festivos.slice());
@@ -87,11 +89,12 @@ window.Store = (() => {
   // ============================================================
   async function loadAll(){
     if (usaSupabase){
-      const [pe,aj,fe,ma] = await Promise.all([
+      const [pe,aj,fe,ma,de] = await Promise.all([
         sb.from("personas").select("*").order("orden"),
         sb.from("ajustes").select("*"),
         sb.from("festivos").select("*").order("fecha"),
-        sb.from("marcas").select("*")
+        sb.from("marcas").select("*"),
+        sb.from("departamentos").select("*").order("orden")
       ]);
       const ajustes = {};
       (aj.data||[]).forEach(r => ajustes[r.clave] = r.valor);
@@ -99,7 +102,8 @@ window.Store = (() => {
         personas: pe.data || [],
         ajustes:  { year:+ajustes.year||CFG.defaults.year, max_fuera:+ajustes.max_fuera||0, horas_por_dia:+ajustes.horas_por_dia||8 },
         festivos: fe.data || [],
-        marcas:   ma.data || []
+        marcas:   ma.data || [],
+        departamentos: de.data || []
       };
     } else {
       seedLocalSiHaceFalta();
@@ -107,9 +111,26 @@ window.Store = (() => {
         personas: lsGet(LS.personas, []),
         ajustes:  lsGet(LS.ajustes, {}),
         festivos: lsGet(LS.festivos, []),
-        marcas:   lsGet(LS.marcas, [])
+        marcas:   lsGet(LS.marcas, []),
+        departamentos: lsGet(LS.departamentos, [])
       };
     }
+  }
+
+  // ============================================================
+  //  DEPARTAMENTOS
+  // ============================================================
+  async function addDepartamento(d){
+    if (usaSupabase){ const { error } = await sb.from("departamentos").insert(d); return !error; }
+    const arr = lsGet(LS.departamentos, []);
+    const id = arr.reduce((m,x)=>Math.max(m,x.id),0)+1;
+    arr.push({ id, orden:id, ...d }); lsSet(LS.departamentos, arr); return true;
+  }
+  async function updateDepartamento(id, fields){
+    if (usaSupabase){ const { error } = await sb.from("departamentos").update(fields).eq("id",id); return !error; }
+    const arr = lsGet(LS.departamentos, []);
+    const i = arr.findIndex(x=>x.id===id); if (i>=0) Object.assign(arr[i], fields);
+    lsSet(LS.departamentos, arr); return true;
   }
 
   // ============================================================
@@ -209,6 +230,7 @@ window.Store = (() => {
       .on("postgres_changes", { event:"*", schema:"public", table:"personas" }, onChange)
       .on("postgres_changes", { event:"*", schema:"public", table:"festivos" }, onChange)
       .on("postgres_changes", { event:"*", schema:"public", table:"ajustes"  }, onChange)
+      .on("postgres_changes", { event:"*", schema:"public", table:"departamentos" }, onChange)
       .subscribe();
   }
 
@@ -216,6 +238,7 @@ window.Store = (() => {
     usaSupabase,
     getUser, login, logout, changePassword, onAuthChange, createUser, isAdmin,
     loadAll, addPersona, updatePersona, deletePersona,
+    addDepartamento, updateDepartamento,
     setAjustes, addFestivo, deleteFestivo,
     setMarca, delMarca, addLog, loadLogs,
     addPerfil, loadPerfiles, subscribe

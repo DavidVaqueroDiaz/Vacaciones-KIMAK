@@ -33,13 +33,20 @@ window.APP_CONFIG = {
     year:        2026,
     maxFuera:    2,
     horasPorDia: 8,
+    departamentos: [
+      { nombre: "Departamento A", max_fuera: 2 },
+      { nombre: "Departamento B", max_fuera: 1 }
+    ],
     personas: [
-      { nombre: "Compañero 1", color: "1F77B4", dias_anuales: 22, bolsa_horas: 20, turno: "ciclo3" },
-      { nombre: "Compañero 2", color: "E15759", dias_anuales: 22, bolsa_horas: 20, turno: "ciclo2" },
-      { nombre: "Compañero 3", color: "59A14F", dias_anuales: 22, bolsa_horas: 20, turno: "ciclo1" },
-      { nombre: "Compañero 4", color: "F28E2B", dias_anuales: 22, bolsa_horas: 20, turno: "" },
-      { nombre: "Compañero 5", color: "AF7AA1", dias_anuales: 22, bolsa_horas: 20, turno: "" },
-      { nombre: "Compañero 6", color: "4E79A7", dias_anuales: 22, bolsa_horas: 20, turno: "par" }
+      { nombre: "Compañero 1", color: "1F77B4", dias_anuales: 22, bolsa_horas: 20, turno: "ciclo3", departamento_id: 1, horario: "8,8,8,8,8" },
+      { nombre: "Compañero 2", color: "E15759", dias_anuales: 22, bolsa_horas: 20, turno: "ciclo2", departamento_id: 1, horario: "8,8,8,8,8" },
+      { nombre: "Compañero 3", color: "59A14F", dias_anuales: 22, bolsa_horas: 20, turno: "ciclo1", departamento_id: 1, horario: "8,8,8,8,8" },
+      { nombre: "Compañero 4", color: "F28E2B", dias_anuales: 22, bolsa_horas: 20, turno: "",       departamento_id: 1, horario: "8,8,8,8,8" },
+      { nombre: "Compañero 5", color: "AF7AA1", dias_anuales: 22, bolsa_horas: 20, turno: "",       departamento_id: 1, horario: "8,8,8,8,8" },
+      { nombre: "Compañero 6", color: "4E79A7", dias_anuales: 22, bolsa_horas: 20, turno: "par",    departamento_id: 1, horario: "8,8,8,8,8" },
+      { nombre: "Compañero 7", color: "17BECF", dias_anuales: 22, bolsa_horas: 20, turno: "tarde",  departamento_id: 2, horario: "8,8,8,8,8" },
+      { nombre: "Compañero 8", color: "9467BD", dias_anuales: 22, bolsa_horas: 20, turno: "impar",  departamento_id: 2, horario: "8,8,8,8,8" },
+      { nombre: "Compañero 9", color: "8C564B", dias_anuales: 22, bolsa_horas: 20, turno: "partido",departamento_id: 2, horario: "8.5,8.5,8.5,8.5,6" }
     ],
     festivos: [
       { fecha: "2026-01-01", nombre: "Año Nuevo" },

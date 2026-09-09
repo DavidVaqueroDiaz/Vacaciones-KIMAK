@@ -12,7 +12,9 @@ const state = {
   festivosSet: new Set(),  // "AAAA-MM-DD"
   festivos: [],            // [{fecha,nombre}]
   marcas: new Map(),       // "personaId|fecha" -> valor
-  esAdminFlag: false       // se resuelve contra la tabla "admins" al entrar
+  esAdminFlag: false,      // se resuelve contra la tabla "admins" al entrar
+  departamentos: [],       // [{id,nombre,max_fuera,orden}]
+  depActual: null          // departamento que se está viendo
 };
 let mesActual = 0;
 
@@ -35,6 +37,72 @@ const esFestivo = f => state.festivosSet.has(f);
 const key = (pid,f) => pid+"|"+f;
 const fmt = d => ymd(d.getFullYear(), d.getMonth(), d.getDate());
 const personaById = id => state.personas.find(p=>p.id===id);
+
+// ---------- departamentos ----------
+// Personas del departamento que se está viendo ahora mismo
+const personasDep = () => state.personas.filter(p => p.departamento_id === state.depActual);
+const depById = id => state.departamentos.find(d => d.id === id);
+// Máximo de personas fuera a la vez, propio de cada departamento
+function maxFueraDep(){
+  const d = depById(state.depActual);
+  return (d && d.max_fuera != null) ? +d.max_fuera : (state.ajustes.max_fuera || 0);
+}
+
+// ---------- jornada y horas disponibles ----------
+// Horas que trabaja una persona ese día de la semana (0=lunes … 6=domingo).
+// El horario se guarda como "8,8,8,8,8" o "8.5,8.5,8.5,8.5,6" (lunes a viernes).
+function horasDelDia(p, dow){
+  if (dow >= 5) return 0;                        // findes no cuentan
+  const arr = String(p.horario||"").split(",").map(x => parseFloat(String(x).trim()));
+  if (arr.length === 5 && arr.every(n => !isNaN(n) && n >= 0)) return arr[dow];
+  return state.ajustes.horas_por_dia || 8;       // jornada estándar si no tiene horario propio
+}
+// ¿Estaba esta persona en el equipo en esa fecha? (altas y bajas)
+function activaEn(p, fecha){
+  if (p.fecha_alta && fecha < p.fecha_alta) return false;
+  if (p.fecha_baja && fecha > p.fecha_baja) return false;
+  return true;
+}
+// Horas de trabajo del equipo en un día: las teóricas y las que quedan disponibles
+function horasDelEquipo(y, m, d){
+  const fecha = ymd(y,m,d), dow = dowLunes(y,m,d);
+  if (dow >= 5 || esFestivo(fecha)) return { teoricas:0, disponibles:0 };
+  let teoricas = 0, disponibles = 0;
+  personasDep().forEach(p => {
+    if (!activaEn(p, fecha)) return;
+    const h = horasDelDia(p, dow);
+    teoricas += h;
+    const v = state.marcas.get(key(p.id, fecha));
+    if (v === "X") return;                       // día entero fuera
+    if (v === "M"){ disponibles += h/2; return; } // medio día
+    const n = parseFloat(v);
+    if (!isNaN(n)){ disponibles += Math.max(0, h - n); return; } // horas de exceso
+    disponibles += h;
+  });
+  return { teoricas, disponibles };
+}
+// Nivel de ocupación de un día, para el semáforo de la vista anual:
+// 0 = nadie fuera · 1 = alguno · 2 = casi la mitad · 3 = la mitad o más
+function nivelFuera(fecha){
+  const pers = personasDep().filter(p => activaEn(p, fecha));
+  if (!pers.length) return 0;
+  let fuera = 0;
+  pers.forEach(p => { const v = state.marcas.get(key(p.id,fecha)); if (v==="X"||v==="M") fuera++; });
+  if (!fuera) return 0;
+  const r = fuera / pers.length;
+  if (r >= 0.5)   return 3;
+  if (r >= 1/3)   return 2;
+  return 1;
+}
+// Nombres de quienes están fuera ese día (para el texto al pasar el cursor)
+function quienesFuera(fecha){
+  return personasDep().filter(p => {
+    const v = state.marcas.get(key(p.id,fecha));
+    return v === "X" || v === "M";
+  });
+}
+// Redondea a un decimal y quita el ",0" cuando no hace falta
+const numH = n => (Math.round(n*10)/10).toString().replace(".", ",");
 
 // ============================================================
 //  ARRANQUE
@@ -93,9 +161,9 @@ function semanaCuadrante(y,m,d){
 // ¿Esta persona está de turno de tarde en esa semana?
 // El patrón lo lleva cada persona en su campo "turno" (se edita en Ajustes):
 //   ciclo1 / ciclo2 / ciclo3 -> tarde en esa semana del ciclo de 3, repitiendo
-//   par                      -> alterna: tarde en las semanas pares
-//   impar                    -> alterna: tarde en las semanas impares
-//   (vacío)                  -> turno fijo, no se marca nada
+//   par / impar              -> alterna: tarde en las semanas pares o impares
+//   manana / tarde / partido -> turno fijo: se muestra como etiqueta, no se sombrea
+//   (vacío)                  -> sin turno definido, no se marca nada
 function esTardeTurno(persona, semana){
   const turno = (persona && persona.turno ? String(persona.turno) : "").trim().toLowerCase();
   if (!turno || semana < 1) return false;
@@ -106,7 +174,13 @@ function esTardeTurno(persona, semana){
   }
   if (turno === "par")   return semana % 2 === 0;
   if (turno === "impar") return semana % 2 === 1;
-  return false;
+  return false;   // los turnos fijos (mañana/tarde/partido) no se sombrean
+}
+// Etiqueta corta del turno fijo, para mostrarla junto al nombre
+const ETIQUETAS_TURNO = { manana:"Mañana", tarde:"Tarde", partido:"Partido" };
+function etiquetaTurno(p){
+  const t = (p && p.turno ? String(p.turno) : "").trim().toLowerCase();
+  return ETIQUETAS_TURNO[t] || "";
 }
 
 async function arrancarApp(){
@@ -127,13 +201,44 @@ async function arrancarApp(){
 async function recargar(){
   const data = await Store.loadAll();
   state.personas = (data.personas||[]).slice().sort((a,b)=>(a.orden||0)-(b.orden||0));
+  state.departamentos = (data.departamentos||[]).slice().sort((a,b)=>(a.orden||0)-(b.orden||0));
+  fijarDepartamento();
   state.ajustes  = data.ajustes;
   state.festivos = data.festivos||[];
   state.festivosSet = new Set(state.festivos.map(f=>f.fecha));
   state.marcas = new Map();
   (data.marcas||[]).forEach(m => state.marcas.set(key(m.persona_id, m.fecha), String(m.valor)));
   document.getElementById("hdrYear").textContent = state.ajustes.year;
+  pintarSelectorDep();
   renderTodo();
+}
+
+// Elige qué departamento se muestra: el que ya estuviera, si no el propio, si no el primero
+function fijarDepartamento(){
+  const deps = state.departamentos;
+  if (!deps.length){ state.depActual = null; return; }
+  if (state.depActual && deps.some(d => d.id === state.depActual)) return;
+  const mp = miPersona();
+  state.depActual = (mp && mp.departamento_id) ? mp.departamento_id : deps[0].id;
+}
+// Departamentos que puede ver la cuenta actual: el suyo, o todos si es admin
+function depsVisibles(){
+  if (esAdmin()) return state.departamentos;
+  const mp = miPersona();
+  return state.departamentos.filter(d => mp && d.id === mp.departamento_id);
+}
+function pintarSelectorDep(){
+  const sel = document.getElementById("depSelector");
+  const cont = document.getElementById("depBox");
+  if (!sel) return;
+  const visibles = depsVisibles();
+  // Con un solo departamento a la vista no hace falta selector
+  cont.style.display = visibles.length > 1 ? "flex" : "none";
+  sel.innerHTML = visibles.map(d => `<option value="${d.id}">${esc(d.nombre)}</option>`).join("");
+  if (visibles.some(d => d.id === state.depActual)) sel.value = state.depActual;
+  const d = depById(state.depActual);
+  const et = document.getElementById("depNombre");
+  if (et) et.textContent = d ? d.nombre : "";
 }
 
 function renderTodo(){
@@ -147,17 +252,19 @@ function renderTodo(){
 function renderCalendario(){
   const y = state.ajustes.year, m = mesActual, nd = diasDelMes(y,m);
   document.getElementById("mesActual").textContent = `${MESES[m]} ${y}`;
-  const maxFuera = state.ajustes.max_fuera;
+  const maxFuera = maxFueraDep();
+  const personas = personasDep();
 
   let html = "<thead><tr><th class='persona-col'>Compañero ↓ / Día →</th>";
   for (let d=1; d<=nd; d++) html += `<th>${d}<div class='dow'>${DOW[dowLunes(y,m,d)]}</div></th>`;
   html += "</tr></thead><tbody>";
 
-  state.personas.forEach(p => {
+  personas.forEach(p => {
     const editable = canEdit(p.id);
     const mp = miPersona();
     const esMia = mp && mp.id === p.id;
-    html += `<tr class='${esMia?"fila-mia":""}'><td class='persona-col'><span class='color-dot' style='background:#${hex(p.color)}'></span>${esc(p.nombre)}${esMia?" <span class='yo'>(tú)</span>":""}</td>`;
+    const etq = etiquetaTurno(p);
+    html += `<tr class='${esMia?"fila-mia":""}'><td class='persona-col'><span class='color-dot' style='background:#${hex(p.color)}'></span>${esc(p.nombre)}${etq?` <span class='etq-turno'>${esc(etq)}</span>`:""}${esMia?" <span class='yo'>(tú)</span>":""}</td>`;
     for (let d=1; d<=nd; d++){
       const f = ymd(y,m,d);
       const v = state.marcas.get(key(p.id, f));
@@ -178,8 +285,17 @@ function renderCalendario(){
   for (let d=1; d<=nd; d++){
     const f = ymd(y,m,d);
     let c = 0;
-    state.personas.forEach(p => { const v = state.marcas.get(key(p.id,f)); if (v==="X"||v==="M") c++; });
+    personas.forEach(p => { const v = state.marcas.get(key(p.id,f)); if (v==="X"||v==="M") c++; });
     html += `<td class='${c>maxFuera?"alerta":""}'>${c||""}</td>`;
+  }
+  html += "</tr>";
+
+  // Fila de horas de trabajo disponibles cada día
+  html += `<tr class='horas-row'><td class='persona-col'>Horas disponibles</td>`;
+  for (let d=1; d<=nd; d++){
+    const h = horasDelEquipo(y,m,d);
+    const falta = h.teoricas > 0 && h.disponibles < h.teoricas;
+    html += `<td class='${falta?"mermado":""}'>${h.teoricas ? esc(numH(h.disponibles)) : ""}</td>`;
   }
   html += "</tr></tbody>";
 
@@ -192,8 +308,38 @@ function renderCalendario(){
       abrirModal(pid, td.dataset.fecha);
     }));
 
+  renderHorasSemana(y, m, nd);
   populateAnioSelector();
   renderAnio();
+}
+
+// Resumen de horas disponibles por semana del mes que se está viendo
+function renderHorasSemana(y, m, nd){
+  const cont = document.getElementById("horasSemana");
+  if (!cont) return;
+  const semanas = new Map();   // nº de semana -> {ini, fin, teoricas, disponibles}
+  for (let d=1; d<=nd; d++){
+    if (dowLunes(y,m,d) >= 5) continue;
+    const s = semanaCuadrante(y,m,d);
+    if (!semanas.has(s)) semanas.set(s, { ini:d, fin:d, teoricas:0, disponibles:0 });
+    const w = semanas.get(s);
+    w.fin = d;
+    const h = horasDelEquipo(y,m,d);
+    w.teoricas += h.teoricas; w.disponibles += h.disponibles;
+  }
+  if (!semanas.size){ cont.innerHTML = ""; return; }
+  let html = "<h4>Horas disponibles por semana</h4><div class='semana-cards'>";
+  semanas.forEach((w, s) => {
+    const pct = w.teoricas ? w.disponibles / w.teoricas : 1;
+    const cls = pct >= 1 ? "full" : (pct >= 0.75 ? "media" : "baja");
+    html += `<div class='semana-card ${cls}'>
+      <div class='sc-dias'>${w.ini}–${w.fin} ${esc(MESES[m].toLowerCase())}</div>
+      <div class='sc-horas'>${esc(numH(w.disponibles))} h</div>
+      <div class='sc-tot'>de ${esc(numH(w.teoricas))} h</div>
+    </div>`;
+  });
+  html += "</div>";
+  cont.innerHTML = html;
 }
 
 // ============================================================
@@ -203,9 +349,9 @@ function populateAnioSelector(){
   const sel = document.getElementById("anioPersona");
   const prev = sel.value;
   sel.innerHTML = `<option value="__todos__">— Todos —</option>` +
-    state.personas.map(p => `<option value="${p.id}">${esc(p.nombre)}</option>`).join("");
+    personasDep().map(p => `<option value="${p.id}">${esc(p.nombre)}</option>`).join("");
   // Por defecto se muestra "Todos"; si el usuario ya eligió algo, se respeta.
-  const def = (prev && (prev === "__todos__" || state.personas.some(p=>String(p.id)===prev))) ? prev : "__todos__";
+  const def = (prev && (prev === "__todos__" || personasDep().some(p=>String(p.id)===prev))) ? prev : "__todos__";
   sel.value = def;
 }
 function renderAnio(){
@@ -230,23 +376,12 @@ function renderAnio(){
         const f = ymd(y,m,day);
         let cls = "", style = "", title = "";
         if (modoTodos){
-          // ¿Quién tiene vacaciones (X o M) este día?
-          const quienes = state.personas.filter(px => {
-            const v = state.marcas.get(key(px.id,f));
-            return v === "X" || v === "M";
-          });
-          if (quienes.length){
-            cls = "dia-x";
+          // Semáforo: amarillo si falta alguien, naranja casi la mitad, rojo la mitad o más
+          const nivel = nivelFuera(f);
+          if (nivel){
+            cls = "sem sem" + nivel;
+            const quienes = quienesFuera(f);
             title = esc(quienes.map(q=>q.nombre).join(", "));
-            if (quienes.length === 1){
-              style = `background:#${hex(quienes[0].color)}`;
-            } else if (quienes.length === 2){
-              style = `background:linear-gradient(90deg,#${hex(quienes[0].color)} 0 50%,#${hex(quienes[1].color)} 50% 100%)`;
-            } else {
-              const segs = quienes.map((q,i) =>
-                `#${hex(q.color)} ${Math.round(i*360/quienes.length)}deg ${Math.round((i+1)*360/quienes.length)}deg`).join(",");
-              style = `background:conic-gradient(${segs})`;
-            }
           }
           else if (esFestivo(f)) cls = "festivo";
           else if (esFinde(y,m,day)) cls = "finde";
@@ -288,7 +423,8 @@ function renderAnio(){
 // ============================================================
 function renderResumen(){
   const acc = {};
-  state.personas.forEach(p => acc[p.id] = { mes:Array(12).fill(0), dias:0, horas:0 });
+  const personas = personasDep();
+  personas.forEach(p => acc[p.id] = { mes:Array(12).fill(0), dias:0, horas:0 });
   state.marcas.forEach((v,k) => {
     const [pid,fecha] = k.split("|"); const id = +pid;
     if (!acc[id]) return;
@@ -301,7 +437,7 @@ function renderResumen(){
   let html = "<thead><tr><th class='nombre'>Compañero</th>";
   MESES.forEach(mm => html += `<th>${mm.slice(0,3)}</th>`);
   html += "<th class='sep'>Días tot.</th><th>Asig.</th><th>Rest.</th><th class='sep'>Horas usad.</th><th>Bolsa</th><th>Rest.</th></tr></thead><tbody>";
-  state.personas.forEach(p => {
+  personas.forEach(p => {
     const a = acc[p.id];
     html += `<tr><td class='nombre'><span class='color-dot' style='background:#${hex(p.color)}'></span>${esc(p.nombre)}</td>`;
     a.mes.forEach(x => html += `<td>${x||""}</td>`);
@@ -313,13 +449,13 @@ function renderResumen(){
   document.getElementById("tablaResumen").innerHTML = html;
 
   let tDias=0,tHoras=0,activos=0; const cargaMes=Array(12).fill(0);
-  state.personas.forEach(p => { const a=acc[p.id]; tDias+=a.dias; tHoras+=a.horas; if(a.dias||a.horas) activos++; a.mes.forEach((x,i)=>cargaMes[i]+=x); });
+  personas.forEach(p => { const a=acc[p.id]; tDias+=a.dias; tHoras+=a.horas; if(a.dias||a.horas) activos++; a.mes.forEach((x,i)=>cargaMes[i]+=x); });
   const idxMax = cargaMes.indexOf(Math.max(...cargaMes));
   const mesMax = Math.max(...cargaMes)>0 ? MESES[idxMax] : "—";
   document.getElementById("statsBox").innerHTML = `
     <div class='stat-card'><div class='n'>${tDias}</div><div class='l'>Días totales cogidos</div></div>
     <div class='stat-card'><div class='n'>${tHoras}</div><div class='l'>Horas totales usadas</div></div>
-    <div class='stat-card'><div class='n'>${activos}/${state.personas.length}</div><div class='l'>Compañeros activos</div></div>
+    <div class='stat-card'><div class='n'>${activos}/${personas.length}</div><div class='l'>Compañeros activos</div></div>
     <div class='stat-card'><div class='n'>${mesMax}</div><div class='l'>Mes más cargado</div></div>`;
 }
 
@@ -336,21 +472,29 @@ function renderAjustes(){
   document.getElementById("blockParams").style.display = isAdm ? "block" : "none";
   document.getElementById("blockFestivos").style.display = isAdm ? "block" : "none";
   document.getElementById("addPersonaRow").style.display = isAdm ? "flex" : "none";
+  const dep = depById(state.depActual);
+  const elDep = document.getElementById("ajDepNombre");
+  if (elDep) elDep.textContent = dep ? dep.nombre : "—";
+  const elMax = document.getElementById("ajMaxFuera");
+  if (elMax && dep) elMax.value = dep.max_fuera != null ? dep.max_fuera : state.ajustes.max_fuera;
   document.getElementById("notaPersonas").textContent = isAdm
-    ? "Puedes editar a todos. El email vincula cada compañero con su cuenta (debe coincidir con el de su login)."
+    ? "Solo se muestran los compañeros de " + (dep ? dep.nombre : "este departamento") + ". El email vincula a cada uno con su cuenta y el horario son las horas de lunes a viernes."
     : "Solo puedes editar tu propia fila.";
 
   // personas
   const TURNOS = [
-    { v:"",       t:"Fijo (no marcar)" },
-    { v:"ciclo1", t:"Tarde: sem. 1 de 3" },
-    { v:"ciclo2", t:"Tarde: sem. 2 de 3" },
-    { v:"ciclo3", t:"Tarde: sem. 3 de 3" },
-    { v:"par",    t:"Alterna: semanas pares" },
-    { v:"impar",  t:"Alterna: semanas impares" }
+    { v:"",        t:"Sin definir" },
+    { v:"manana",  t:"Fijo: siempre mañana" },
+    { v:"tarde",   t:"Fijo: siempre tarde" },
+    { v:"partido", t:"Fijo: horario partido" },
+    { v:"par",     t:"Alterna: tarde en semanas pares" },
+    { v:"impar",   t:"Alterna: tarde en semanas impares" },
+    { v:"ciclo1",  t:"Ciclo de 3: tarde la semana 1" },
+    { v:"ciclo2",  t:"Ciclo de 3: tarde la semana 2" },
+    { v:"ciclo3",  t:"Ciclo de 3: tarde la semana 3" }
   ];
-  let ph = "<thead><tr><th>Nombre</th><th>Email (cuenta)</th><th>Turno de tarde</th><th>Color</th><th>Días anuales</th><th>Bolsa horas</th><th></th></tr></thead><tbody>";
-  state.personas.forEach(p => {
+  let ph = "<thead><tr><th>Nombre</th><th>Email (cuenta)</th><th>Turno</th><th>Horario (L,M,X,J,V)</th><th>Color</th><th>Días anuales</th><th>Bolsa horas</th><th></th></tr></thead><tbody>";
+  personasDep().forEach(p => {
     const editable = canEdit(p.id);
     const dis = editable ? "" : "disabled";
     const emailDis = isAdm ? "" : "disabled"; // el email y el turno solo los gestiona el admin
@@ -360,6 +504,7 @@ function renderAjustes(){
       <td><input class="e-nombre" value="${esc(p.nombre)}" ${dis}></td>
       <td><input class="e-email" value="${esc(p.email||"")}" placeholder="email@..." style="width:160px" ${emailDis}></td>
       <td><select class="e-turno" ${emailDis}>${opts}</select></td>
+      <td><input class="e-horario" value="${esc(p.horario||"")}" placeholder="8,8,8,8,8" style="width:120px" ${emailDis}></td>
       <td><input class="e-color" value="${esc(p.color)}" maxlength="6" style="width:80px" ${dis}> <span class="color-dot" style="background:#${hex(p.color)}"></span></td>
       <td><input class="e-dias" type="number" value="${p.dias_anuales}" style="width:70px" ${dis}></td>
       <td><input class="e-horas" type="number" value="${p.bolsa_horas}" style="width:70px" ${dis}></td>
@@ -387,11 +532,14 @@ function renderAjustes(){
 async function guardarParams(){
   const obj = {
     year:+document.getElementById("ajYear").value,
-    max_fuera:+document.getElementById("ajMaxFuera").value,
     horas_por_dia:+document.getElementById("ajHorasDia").value
   };
   await Store.setAjustes(obj);
-  await log("ajustes", `Parámetros: año=${obj.year}, máx fuera=${obj.max_fuera}, horas/día=${obj.horas_por_dia}`);
+  // El máximo de personas fuera es propio de cada departamento
+  const maxF = +document.getElementById("ajMaxFuera").value;
+  if (state.depActual) await Store.updateDepartamento(state.depActual, { max_fuera: maxF });
+  const dep = depById(state.depActual);
+  await log("ajustes", `Parámetros: año=${obj.year}, horas/día=${obj.horas_por_dia}, máx fuera en ${dep?dep.nombre:"?"}=${maxF}`);
   await recargar(); renderAjustes(); toast("Parámetros guardados");
 }
 async function guardarPersona(id){
@@ -404,8 +552,9 @@ async function guardarPersona(id){
     bolsa_horas:  +tr.querySelector(".e-horas").value
   };
   if (esAdmin()){
-    fields.email = tr.querySelector(".e-email").value.trim();
-    fields.turno = tr.querySelector(".e-turno").value;
+    fields.email   = tr.querySelector(".e-email").value.trim();
+    fields.turno   = tr.querySelector(".e-turno").value;
+    fields.horario = tr.querySelector(".e-horario").value.trim();
   }
   if (!fields.nombre){ toast("El nombre no puede estar vacío"); return; }
   await Store.updatePersona(id, fields);
@@ -428,7 +577,8 @@ async function addPersona(){
   const dias = +document.getElementById("npDias").value || 22;
   const horas = +document.getElementById("npHoras").value || 0;
   const orden = (state.personas.reduce((m,p)=>Math.max(m,p.orden||0),0))+1;
-  await Store.addPersona({ nombre, email, color, dias_anuales:dias, bolsa_horas:horas, orden });
+  const departamento_id = state.depActual;
+  await Store.addPersona({ nombre, email, color, dias_anuales:dias, bolsa_horas:horas, orden, departamento_id });
   await log("persona", `Añadido compañero: ${nombre}`);
   document.getElementById("npNombre").value=""; document.getElementById("npEmail").value=""; document.getElementById("npColor").value="";
   await recargar(); renderAjustes(); toast("Compañero añadido");
@@ -519,7 +669,7 @@ function abrirModal(pidPre, fechaPre){
   modalMsg.textContent = "";
   const mp = miPersona();
   // No-admin: solo puede operar sobre su propia persona
-  const lista = (Store.usaSupabase && !esAdmin()) ? (mp ? [mp] : []) : state.personas;
+  const lista = (Store.usaSupabase && !esAdmin()) ? (mp ? [mp] : []) : personasDep();
   mPersona.innerHTML = lista.map(p=>`<option value="${p.id}">${esc(p.nombre)}</option>`).join("");
   mPersona.disabled = (Store.usaSupabase && !esAdmin());
 
@@ -599,7 +749,7 @@ async function borrar(){
 }
 async function finalizar(msg){ cerrarModal(); await recargar(); toast(msg); }
 function contarFuera(fecha, exclPid){
-  let c=0; state.personas.forEach(p => { if (p.id===exclPid) return; const v=state.marcas.get(key(p.id,fecha)); if (v==="X"||v==="M") c++; });
+  let c=0; personasDep().forEach(p => { if (p.id===exclPid) return; const v=state.marcas.get(key(p.id,fecha)); if (v==="X"||v==="M") c++; });
   return c;
 }
 
@@ -652,6 +802,18 @@ function initEventos(){
   document.getElementById("btnNext").onclick = () => { mesActual=(mesActual+1)%12; renderCalendario(); };
   document.getElementById("btnHoy").onclick = () => { const h=new Date(); mesActual=(h.getFullYear()===state.ajustes.year)?h.getMonth():0; renderCalendario(); };
   document.getElementById("anioPersona").onchange = renderAnio;
+
+  // cambiar de departamento
+  const depSel = document.getElementById("depSelector");
+  if (depSel) depSel.onchange = e => {
+    state.depActual = +e.target.value;
+    const d = depById(state.depActual);
+    pintarSelectorDep();
+    renderTodo();
+    const activa = document.querySelector(".tab.active")?.dataset.tab;
+    if (activa === "ajustes") renderAjustes();
+    if (d) toast("Viendo: " + d.nombre);
+  };
 
   // modal pedir
   document.getElementById("btnPedir").onclick = () => abrirModal(null,null);

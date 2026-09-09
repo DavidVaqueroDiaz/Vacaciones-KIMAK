@@ -3,9 +3,9 @@
   --azul2:#4472c4;
   --amarillo:#fff2cc;
   --gris-borde:#d9dee8;
-  --finde:#cfd4dd;
+  --finde:#e4e7ec;
   --finde-vac:#e8eaef;
-  --festivo:#ffd9b3;
+  --festivo:#b9bec7;
   --texto:#1f2733;
   --rojo:#d9534f;
 }
@@ -233,3 +233,46 @@ button{font-family:inherit;}
 .anio-nota .chip-hoy{display:inline-block;width:12px;height:12px;border-radius:50%;border:2px solid var(--rojo);}
 .anio-nota{font-size:12px;color:#788;display:flex;align-items:center;gap:6px;}
 .anio-nota .chip-tarde{display:inline-block;width:14px;height:14px;border-radius:50%;background:#e2e6ec;border:1px solid #cfd4dd;}
+
+
+/* ----- Selector de departamento (barra superior) ----- */
+.dep-box{display:flex;align-items:center;gap:8px;color:#fff;}
+.dep-box label{font-size:12px;opacity:.85;}
+.dep-box select{
+  padding:6px 10px;border:1px solid #5b6b86;border-radius:6px;
+  background:#3d4a63;color:#fff;font-size:14px;font-family:inherit;cursor:pointer;
+}
+
+/* ----- Etiqueta de turno fijo junto al nombre ----- */
+.etq-turno{
+  font-size:10px;font-weight:600;color:#5b6577;background:#e2e6ec;
+  border-radius:4px;padding:1px 5px;margin-left:4px;vertical-align:middle;
+}
+
+/* ----- Fila de horas disponibles ----- */
+.cal-table tr.horas-row td{background:#f2f6fb;color:#456;font-size:11px;font-weight:600;}
+.cal-table tr.horas-row td.mermado{background:#fff4e0;color:#8a5a00;}
+
+/* ----- Resumen de horas por semana ----- */
+.horas-semana{margin-top:16px;}
+.horas-semana h4{margin:0 0 8px;color:var(--azul);font-size:14px;}
+.semana-cards{display:flex;gap:10px;flex-wrap:wrap;}
+.semana-card{
+  background:#fff;border:1px solid var(--gris-borde);border-left:4px solid #3a7d44;
+  border-radius:8px;padding:8px 14px;min-width:110px;
+}
+.semana-card.media{border-left-color:#e8a33d;}
+.semana-card.baja{border-left-color:var(--rojo);}
+.semana-card .sc-dias{font-size:11px;color:#788;}
+.semana-card .sc-horas{font-size:19px;font-weight:700;color:var(--azul);}
+.semana-card .sc-tot{font-size:11px;color:#99a;}
+
+/* ----- Semáforo de ocupación (vista anual) ----- */
+.mini-tabla td.sem .d{font-weight:700;color:#3d3016;}
+.mini-tabla td.sem1 .d{background:#ffe08a;}
+.mini-tabla td.sem2 .d{background:#f7a95c;}
+.mini-tabla td.sem3 .d{background:#ea6a5e;color:#fff;}
+.chip-sem{display:inline-block;width:14px;height:14px;border-radius:50%;border:1px solid #cfd4dd;margin-left:6px;}
+.chip-sem.sem1{background:#ffe08a;}
+.chip-sem.sem2{background:#f7a95c;}
+.chip-sem.sem3{background:#ea6a5e;}
