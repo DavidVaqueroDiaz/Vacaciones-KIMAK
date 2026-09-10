@@ -16,7 +16,8 @@ const state = {
   departamentos: [],       // [{id,nombre,max_fuera,orden}]
   depActual: null          // departamento que se está viendo
 };
-let mesActual = 0;
+let mesActual  = 0;   // mes que muestra el calendario
+let mesSemanas = 0;   // mes que muestran las tarjetas de horas por semana
 
 // ---------- seguridad: nunca insertar texto de la BD sin escapar ----------
 // Evita que alguien pueda inyectar HTML o JavaScript a través de un nombre,
@@ -63,9 +64,10 @@ function activaEn(p, fecha){
   if (p.fecha_baja && fecha > p.fecha_baja) return false;
   return true;
 }
-// Horas de trabajo del equipo en un día: las teóricas y las que quedan disponibles
-function horasDelEquipo(y, m, d){
-  const fecha = ymd(y,m,d), dow = dowLunes(y,m,d);
+// Horas de trabajo del equipo en un día: las teóricas y las que quedan disponibles.
+// Recibe un Date, así que también vale para días de otro mes (semanas partidas).
+function horasDelEquipoD(dt){
+  const fecha = fmt(dt), dow = (dt.getDay()+6)%7;
   if (dow >= 5 || esFestivo(fecha)) return { teoricas:0, disponibles:0 };
   let teoricas = 0, disponibles = 0;
   personasDep().forEach(p => {
@@ -81,6 +83,7 @@ function horasDelEquipo(y, m, d){
   });
   return { teoricas, disponibles };
 }
+const horasDelEquipo = (y,m,d) => horasDelEquipoD(new Date(y,m,d));
 // Quiénes están fuera ese día: da el color de cada uno para repartir el
 // círculo en la vista anual, y sus nombres para el texto al pasar el cursor.
 function quienesFuera(fecha){
@@ -91,6 +94,45 @@ function quienesFuera(fecha){
 }
 // Redondea a un decimal y quita el ",0" cuando no hace falta
 const numH = n => (Math.round(n*10)/10).toString().replace(".", ",");
+
+// ---------- semanas completas ----------
+const MESES_CORTOS = ["ene","feb","mar","abr","may","jun","jul","ago","sep","oct","nov","dic"];
+// Semanas de lunes a viernes que tocan un mes. Una semana se cuenta entera
+// aunque empiece o termine en el mes de al lado (31 oct – 4 nov, por ejemplo),
+// así que las semanas partidas salen en los dos meses.
+function semanasDelMes(y, m){
+  const primero = new Date(y, m, 1);
+  const ultimo  = new Date(y, m, diasDelMes(y,m));
+  const lunes = new Date(primero);
+  lunes.setDate(primero.getDate() - ((primero.getDay()+6)%7));
+  const semanas = [];
+  while (lunes <= ultimo){
+    const dias = [];
+    for (let i=0; i<5; i++){
+      const d = new Date(lunes); d.setDate(lunes.getDate()+i); dias.push(d);
+    }
+    if (dias[4] >= primero){          // la semana anterior al día 1 no pinta nada aquí
+      let teoricas = 0, disponibles = 0;
+      const fuera = new Map();        // id -> nombre, para no contar dos veces a nadie
+      dias.forEach(d => {
+        const h = horasDelEquipoD(d);
+        teoricas += h.teoricas; disponibles += h.disponibles;
+        quienesFuera(fmt(d)).forEach(p => fuera.set(p.id, p.nombre));
+      });
+      semanas.push({ ini:dias[0], fin:dias[4], teoricas, disponibles, fuera:[...fuera.values()] });
+    }
+    lunes.setDate(lunes.getDate()+7);
+  }
+  return semanas;
+}
+// "7 – 11 sep"  ·  "31 ago – 4 sep" cuando la semana cambia de mes
+function etiquetaSemana(ini, fin){
+  const a = ini.getDate(), b = fin.getDate();
+  if (ini.getMonth() === fin.getMonth()) return `${a} – ${b} ${MESES_CORTOS[ini.getMonth()]}`;
+  return `${a} ${MESES_CORTOS[ini.getMonth()]} – ${b} ${MESES_CORTOS[fin.getMonth()]}`;
+}
+// Semáforo de la semana: 0 nadie · 1 amarillo · 2 naranja · 3 o más rojo
+const nivelSemana = n => n >= 3 ? 3 : n;
 
 // ============================================================
 //  ARRANQUE
@@ -182,8 +224,10 @@ async function arrancarApp(){
   if (!arrancada){
     arrancada = true;
     Store.subscribe(() => recargar());
+    // Al entrar se abre por el mes en curso (el año lo sabemos tras recargar)
     const hoy = new Date();
-    mesActual = (hoy.getFullYear() === state.ajustes.year) ? hoy.getMonth() : 0;
+    mesActual = mesSemanas = (hoy.getFullYear() === state.ajustes.year) ? hoy.getMonth() : 0;
+    renderCalendario();
   }
 }
 
@@ -306,38 +350,41 @@ function renderCalendario(){
       abrirModal(pid, td.dataset.fecha);
     }));
 
-  renderHorasSemana(y, m, nd);
+  renderHorasSemana();
   populateAnioSelector();
   renderAnio();
 }
 
-// Resumen de horas disponibles por semana del mes que se está viendo
-function renderHorasSemana(y, m, nd){
+// Resumen de horas disponibles por semana. Tiene su propio mes y sus propias
+// flechas, para poder mirar semanas de más adelante sin mover el calendario.
+function renderHorasSemana(){
   const cont = document.getElementById("horasSemana");
   if (!cont) return;
-  const semanas = new Map();   // nº de semana -> {ini, fin, teoricas, disponibles}
-  for (let d=1; d<=nd; d++){
-    if (dowLunes(y,m,d) >= 5) continue;
-    const s = semanaCuadrante(y,m,d);
-    if (!semanas.has(s)) semanas.set(s, { ini:d, fin:d, teoricas:0, disponibles:0 });
-    const w = semanas.get(s);
-    w.fin = d;
-    const h = horasDelEquipo(y,m,d);
-    w.teoricas += h.teoricas; w.disponibles += h.disponibles;
-  }
-  if (!semanas.size){ cont.innerHTML = ""; return; }
-  let html = "<h4>Horas disponibles por semana</h4><div class='semana-cards'>";
-  semanas.forEach((w, s) => {
-    const pct = w.teoricas ? w.disponibles / w.teoricas : 1;
-    const cls = pct >= 1 ? "full" : (pct >= 0.75 ? "media" : "baja");
-    html += `<div class='semana-card ${cls}'>
-      <div class='sc-dias'>${w.ini}–${w.fin} ${esc(MESES[m].toLowerCase())}</div>
+  if (!personasDep().length){ cont.innerHTML = ""; return; }
+  const y = state.ajustes.year, m = mesSemanas;
+  const semanas = semanasDelMes(y, m);
+
+  let html = `<div class='hs-head'>
+      <h4>Horas disponibles por semana</h4>
+      <button id='hsPrev' class='nav-btn sm' title='Mes anterior'>◀</button>
+      <span class='hs-mes'>${esc(MESES[m])} ${esc(String(y))}</span>
+      <button id='hsNext' class='nav-btn sm' title='Mes siguiente'>▶</button>
+    </div><div class='semana-cards'>`;
+  semanas.forEach(w => {
+    const n = w.fuera.length;
+    const tit = n ? "De vacaciones esta semana: " + w.fuera.join(", ")
+                  : "Esta semana no falta nadie";
+    html += `<div class='semana-card hs${nivelSemana(n)}' title="${esc(tit)}">
+      <div class='sc-dias'>${esc(etiquetaSemana(w.ini, w.fin))}</div>
       <div class='sc-horas'>${esc(numH(w.disponibles))} h</div>
       <div class='sc-tot'>de ${esc(numH(w.teoricas))} h</div>
+      <div class='sc-fuera'>${n ? esc(n === 1 ? "1 persona fuera" : n + " personas fuera") : "equipo completo"}</div>
     </div>`;
   });
   html += "</div>";
   cont.innerHTML = html;
+  cont.querySelector("#hsPrev").onclick = () => { mesSemanas = (mesSemanas+11)%12; renderHorasSemana(); };
+  cont.querySelector("#hsNext").onclick = () => { mesSemanas = (mesSemanas+1)%12;  renderHorasSemana(); };
 }
 
 // ============================================================
@@ -661,6 +708,104 @@ async function renderUsuarios(){
 }
 
 // ============================================================
+//  AYUDA — cómo se usa la aplicación
+//  Se pinta distinto según quién entre: lo que ve todo el mundo y, si la
+//  cuenta es de administrador, un bloque extra con lo que solo él puede hacer.
+// ============================================================
+const AYUDA_TODOS = [
+  ["Entrar y cambiar la contraseña",
+   ["Entras con tu <b>email</b> y tu <b>contraseña</b>. La primera vez te la damos nosotros.",
+    "Cámbiala cuanto antes con el botón <b>«Cambiar contraseña»</b> de arriba a la derecha. Mínimo 6 caracteres.",
+    "Si se te olvida, pídesela al administrador: él puede restablecerla."]],
+  ["Pedir vacaciones u horas",
+   ["Botón <b>«+ Pedir vacaciones / horas»</b>, o <b>doble clic</b> en un día del calendario (también en los calendarios pequeños de la vista anual).",
+    "<b>Día(s) entero(s)</b>: marca de golpe todo un rango de fechas. Se salta findes y festivos.",
+    "<b>Medio día</b> y <b>Horas de exceso</b>: solo para un día suelto.",
+    "Para quitar días, abre la misma ventana con esas fechas y pulsa <b>«Borrar día(s)»</b>."]],
+  ["Qué significa cada marca",
+   ["<b>X</b> = día entero de vacaciones, con tu color.",
+    "<b>M</b> = medio día (el cuadro sale partido en diagonal).",
+    "Un <b>número</b> = horas sueltas que gastas ese día.",
+    "La fila <b>«Personas fuera»</b> se pone en rojo si ese día se pasa del máximo permitido en tu departamento."]],
+  ["Solo puedes tocar lo tuyo",
+   ["Tu fila aparece resaltada y con la palabra <b>(tú)</b>.",
+    "Puedes marcar y borrar <b>únicamente tus días</b>. Si intentas cambiar los de otro, la aplicación no te deja.",
+    "Esto no es solo la pantalla: el permiso está puesto en la base de datos, así que no hay forma de saltárselo."]],
+  ["Vista anual",
+   ["El selector <b>«— Todos —»</b> enseña de un vistazo quién está fuera cada día: si falta una persona el círculo sale de su color, y si faltan varias se reparte entre los colores de cada una.",
+    "Pon el cursor encima de un día y te dice <b>los nombres</b> de quienes están de vacaciones.",
+    "El día de <b>hoy</b> lleva un borde rojo, y las semanas de <b>turno de tarde</b> salen sombreadas en gris."]],
+  ["Horas disponibles por semana",
+   ["Cada tarjeta es una <b>semana completa de lunes a viernes</b>, aunque empiece en un mes y acabe en el siguiente.",
+    "Enseña las horas que le quedan al equipo frente a las que tendría a pleno rendimiento.",
+    "El color avisa de un vistazo: <b>amarillo</b> si esa semana falta una persona, <b>naranja</b> si faltan dos y <b>rojo</b> si faltan tres o más.",
+    "Con las <b>flechas ◀ ▶</b> de ese bloque puedes mirar los meses siguientes sin mover el calendario de arriba."]],
+  ["Resumen",
+   ["Te dice cuántos <b>días y horas has gastado</b> y cuántos te quedan.",
+    "Si ves un número raro, mira primero tus días anuales y tu bolsa de horas en <b>Ajustes</b>."]],
+  ["Ajustes: lo que puedes cambiar tú",
+   ["De <b>tu propia fila</b>: el nombre, el color, los días anuales, la bolsa de horas y tu horario de lunes a viernes.",
+    "El <b>horario</b> se escribe con las horas de cada día separadas por comas. Por ejemplo <code>8,8,8,8,8</code> son 40 horas, y <code>8.5,8.5,8.5,8.5,6</code> es una jornada partida.",
+    "El <b>email</b>, el <b>turno</b> y el <b>departamento</b> solo los cambia el administrador."]],
+  ["Registro",
+   ["Queda apuntado <b>quién ha hecho cada cosa y cuándo</b>: entradas, cambios de contraseña, días pedidos y días borrados.",
+    "Está a la vista de todos a propósito, para que no haya dudas si algo cambia."]]
+];
+
+const AYUDA_ADMIN = [
+  ["Parámetros generales",
+   ["En <b>Ajustes</b> puedes cambiar el <b>año</b>, las <b>horas por día completo</b> y el <b>máximo de personas fuera a la vez</b>.",
+    "Ese máximo es <b>propio de cada departamento</b>: cambia el selector de arriba y ajusta el de cada uno por separado."]],
+  ["Compañeros",
+   ["Puedes editar <b>la fila de cualquiera</b>, no solo la tuya, y además el email, el turno, el departamento y las fechas de alta y baja.",
+    "El <b>turno</b> marca las semanas de tarde en la vista anual: <code>ciclo1</code>, <code>ciclo2</code> y <code>ciclo3</code> rotan cada tres semanas; <code>par</code> e <code>impar</code> alternan; <code>mañana</code>, <code>tarde</code> y <code>partido</code> son fijos y salen como etiqueta junto al nombre.",
+    "La <b>fecha de baja</b> es mejor que borrar a alguien: deja de contar a partir de ese día pero se conserva su histórico."]],
+  ["Festivos",
+   ["Se añaden y se quitan desde <b>Ajustes</b>. Un festivo no gasta vacaciones y no cuenta horas."]],
+  ["Crear cuentas",
+   ["Pestaña <b>Usuarios</b>: pon el email, genera una contraseña y comparte los dos datos con esa persona.",
+    "Después, en <b>Ajustes</b>, escribe ese mismo email en la fila del compañero: es lo que une la cuenta con su fila del calendario.",
+    "Para <b>restablecer una contraseña</b> olvidada o <b>borrar una cuenta</b>, entra en Supabase → Authentication → Users."]],
+  ["Hacer administrador a alguien",
+   ["Se decide en la tabla <code>admins</code> de la base de datos, no en el código.",
+    "En Supabase → SQL Editor: <code>insert into admins (email) values ('correo@ejemplo.com');</code>",
+    "Quitarlo: <code>delete from admins where email = 'correo@ejemplo.com';</code>"]],
+  ["Departamentos",
+   ["El selector <b>«Departamento»</b> de arriba solo lo ves tú y quien sea administrador: los demás ven únicamente el suyo.",
+    "Todo lo que hay debajo (calendario, resumen, horas por semana y vista anual) es del departamento que tengas elegido en ese momento."]]
+];
+
+function bloqueAyuda(secciones){
+  return secciones.map(([titulo, puntos]) =>
+    `<div class='ayuda-sec'><h4>${esc(titulo)}</h4><ul>` +
+    puntos.map(t => `<li>${t}</li>`).join("") +
+    `</ul></div>`).join("");
+}
+
+function renderAyuda(){
+  const cont = document.getElementById("ayudaBox");
+  if (!cont) return;
+  const admin = esAdmin();
+  let html = `<div class='ayuda-quien ${admin ? "admin" : ""}'>
+      ${admin ? "🔑 Estás dentro como <b>administrador</b>: puedes cambiar los datos de todo el mundo."
+              : "👤 Estás dentro como <b>usuario</b>: puedes ver el calendario entero, pero solo cambiar lo tuyo."}
+    </div>`;
+  html += `<div class='ajustes-block'><h3>Cómo se usa</h3>${bloqueAyuda(AYUDA_TODOS)}</div>`;
+  if (admin){
+    html += `<div class='ajustes-block ayuda-admin'>
+      <h3>Solo para administradores</h3>
+      <p class='muted-note'>Esto no lo ve nadie más: solo aparece en las cuentas que están en la tabla <code>admins</code>.</p>
+      ${bloqueAyuda(AYUDA_ADMIN)}</div>`;
+  }
+  html += `<div class='ajustes-block'><h3>¿Algo no cuadra?</h3><ul class='ayuda-final'>
+      <li>Si ves datos viejos, recarga la página con <b>Ctrl + Mayús + R</b>.</li>
+      <li>Si no te deja cambiar algo, seguramente no es tuyo: mira que la fila lleve el <b>(tú)</b>.</li>
+      <li>Para cualquier otra cosa, habla con el administrador.</li>
+    </ul></div>`;
+  cont.innerHTML = html;
+}
+
+// ============================================================
 //  MODAL PEDIR
 // ============================================================
 const overlay = document.getElementById("overlay");
@@ -804,10 +949,12 @@ function initEventos(){
     toast("Contraseña cambiada");
   };
 
-  // navegación mes
-  document.getElementById("btnPrev").onclick = () => { mesActual=(mesActual+11)%12; renderCalendario(); };
-  document.getElementById("btnNext").onclick = () => { mesActual=(mesActual+1)%12; renderCalendario(); };
-  document.getElementById("btnHoy").onclick = () => { const h=new Date(); mesActual=(h.getFullYear()===state.ajustes.year)?h.getMonth():0; renderCalendario(); };
+  // navegación mes (las tarjetas de horas siguen al calendario, pero luego
+  // se pueden mover por su cuenta con sus propias flechas)
+  const irAlMes = m => { mesActual = m; mesSemanas = m; renderCalendario(); };
+  document.getElementById("btnPrev").onclick = () => irAlMes((mesActual+11)%12);
+  document.getElementById("btnNext").onclick = () => irAlMes((mesActual+1)%12);
+  document.getElementById("btnHoy").onclick = () => { const h=new Date(); irAlMes((h.getFullYear()===state.ajustes.year)?h.getMonth():0); };
   document.getElementById("anioPersona").onchange = renderAnio;
   window.addEventListener("resize", moverIndicador);
 
@@ -853,6 +1000,7 @@ function initEventos(){
       if (tab.dataset.tab==="ajustes") renderAjustes();
       if (tab.dataset.tab==="usuarios") renderUsuarios();
       if (tab.dataset.tab==="registro") renderLogs();
+      if (tab.dataset.tab==="ayuda")    renderAyuda();
     };
   });
 }
