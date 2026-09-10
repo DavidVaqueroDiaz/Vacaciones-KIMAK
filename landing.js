@@ -168,7 +168,12 @@
       for (let c=0; c<cols; c++){ if (mask[base+c]){ any = true; break; } }
       if (any){ lastWoodRow = r; break; }
     }
-    hero.style.paddingTop = ((lastWoodRow+1)*CELL + 48) + "px";
+    const finMadera = (lastWoodRow+1)*CELL;
+    hero.style.paddingTop = (finMadera + 48) + "px";
+    // la firma se esconde en la parte baja del tablón, justo encima del título:
+    // es lo último que aparece según vas recortando
+    const credito = document.getElementById("credito");
+    if (credito) credito.style.top = Math.round(finMadera*0.72) + "px";
   }
   function resize(){
     const r = hero.getBoundingClientRect();

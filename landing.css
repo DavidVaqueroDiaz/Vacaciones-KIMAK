@@ -35,6 +35,16 @@ html{scroll-behavior:smooth;}
 #heroWood{position:absolute;inset:0;z-index:0;pointer-events:none;}
 #heroFx{position:absolute;inset:0;z-index:1;pointer-events:none;}
 #portada .hero>*:not(canvas){position:relative;z-index:2;}
+/* La firma vive DEBAJO de la madera: misma altura de capa que el tablón, pero
+   antes en el HTML, así que la madera la tapa hasta que la recortas.
+   La posición exacta la fija landing.js, que sabe dónde acaban los tablones. */
+#portada .hero .credito{
+  position:absolute;left:0;right:0;top:22%;z-index:0;pointer-events:none;
+  text-align:center;font-size:clamp(11px,1.5vw,15px);
+  letter-spacing:clamp(2px,.45vw,5px);text-transform:uppercase;
+  font-weight:600;color:var(--accent-deep);
+}
+#portada .hero .credito b{color:var(--text);font-weight:800;}
 #portada .hero h1{text-shadow:0 2px 18px rgba(0,0,0,.18);}
 #portada .hero .eyebrow,#portada .hero .tagline{text-shadow:0 0 7px var(--bg),0 0 14px var(--bg);}
 #portada .eyebrow{

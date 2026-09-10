@@ -129,6 +129,16 @@ html{scroll-behavior:smooth;}
 #heroWood{position:absolute;inset:0;z-index:0;pointer-events:none;}
 #heroFx{position:absolute;inset:0;z-index:1;pointer-events:none;}
 #portada .hero>*:not(canvas){position:relative;z-index:2;}
+/* La firma vive DEBAJO de la madera: misma altura de capa que el tablón, pero
+   antes en el HTML, así que la madera la tapa hasta que la recortas.
+   La posición exacta la fija landing.js, que sabe dónde acaban los tablones. */
+#portada .hero .credito{
+  position:absolute;left:0;right:0;top:22%;z-index:0;pointer-events:none;
+  text-align:center;font-size:clamp(11px,1.5vw,15px);
+  letter-spacing:clamp(2px,.45vw,5px);text-transform:uppercase;
+  font-weight:600;color:var(--accent-deep);
+}
+#portada .hero .credito b{color:var(--text);font-weight:800;}
 #portada .hero h1{text-shadow:0 2px 18px rgba(0,0,0,.18);}
 #portada .hero .eyebrow,#portada .hero .tagline{text-shadow:0 0 7px var(--bg),0 0 14px var(--bg);}
 #portada .eyebrow{
@@ -669,6 +679,9 @@ input:focus,select:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--a
     </div>
 
     <div class="hero">
+      <!-- Va ANTES de los lienzos a propósito: al tener la misma altura de
+           capa, la madera se pinta encima y lo tapa. Solo aparece al cortar. -->
+      <div class="credito" id="credito">Creado por <b>David Vaquero Díaz</b></div>
       <canvas id="heroWood"></canvas>
       <canvas id="heroFx"></canvas>
       <div class="eyebrow">Grupo KIMAK · Calendario del equipo</div>
@@ -678,7 +691,7 @@ input:focus,select:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--a
         <button class="btn btn-primary entrar-app">Entrar en la app →</button>
         <a href="#como-funciona" class="btn btn-ghost">Cómo funciona</a>
       </div>
-      <div class="cut-hint">Pasa por encima de la madera y córtala</div>
+      <div class="cut-hint">Pasa por encima de la madera y córtala · hay algo debajo</div>
       <div class="scroll-cue"><div class="mouse"></div>DESLIZA</div>
     </div>
 
@@ -1135,7 +1148,12 @@ window.WOOD_SRC="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAA6kAAAGWCAYAAACab
       for (let c=0; c<cols; c++){ if (mask[base+c]){ any = true; break; } }
       if (any){ lastWoodRow = r; break; }
     }
-    hero.style.paddingTop = ((lastWoodRow+1)*CELL + 48) + "px";
+    const finMadera = (lastWoodRow+1)*CELL;
+    hero.style.paddingTop = (finMadera + 48) + "px";
+    // la firma se esconde en la parte baja del tablón, justo encima del título:
+    // es lo último que aparece según vas recortando
+    const credito = document.getElementById("credito");
+    if (credito) credito.style.top = Math.round(finMadera*0.72) + "px";
   }
   function resize(){
     const r = hero.getBoundingClientRect();
