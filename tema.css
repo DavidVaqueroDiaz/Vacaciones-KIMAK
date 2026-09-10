@@ -21,7 +21,8 @@ html[data-theme="light"]{
   --border:#dfe3ea;  --border2:#cdd3dd;
   --accent:#b8895b;  --accent-deep:#8a5e36;  --accent-soft:#f4ece2;
   --shadow:0 14px 34px -18px rgba(20,22,26,.30);
-  --finde:#e7eaef;   --festivo:#c9ccd3;   --celda:#fff;
+  --finde:#e7eaef;   --festivo:#eedcc0;   --celda:#fff;
+  --finde-borde:rgba(184,137,91,.45);        /* marco fino dorado del finde */
   --thead-bg:#2f333a;   --thead-fg:#e6c096;   /* cabecera de días: oscura */
   --rojo:#c9453f;    --amarillo:#c58c14;  --naranja:#c4691a;  --verde:#3a7d44;
   --rojo-bg:#fbeceb; --amarillo-bg:#fdf6e6; --naranja-bg:#fdf0e4;
@@ -36,7 +37,8 @@ html[data-theme="dark"]{
   --border:#2a2c30;  --border2:#35383d;
   --accent:#d6a06b;  --accent-deep:#b8895b;  --accent-soft:#241d15;
   --shadow:0 24px 60px -24px rgba(0,0,0,.7);
-  --finde:#191b1f;   --festivo:#303338;   --celda:#17181b;
+  --finde:#191b1f;   --festivo:#3d3122;   --celda:#17181b;
+  --finde-borde:rgba(214,160,107,.34);
   --thead-bg:#0b0c0e;   --thead-fg:#d6a06b;
   --rojo:#e2685f;    --amarillo:#e0ab3c;  --naranja:#dd8033;  --verde:#63b06e;
   --rojo-bg:#2a1a19; --amarillo-bg:#282013; --naranja-bg:#2a1e14;

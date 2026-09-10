@@ -120,7 +120,9 @@ button{font-family:inherit;}
 .cal-table thead th.dow{font-size:10px;font-weight:400;color:var(--thead-fg);opacity:.72;}
 .cal-table td.cell{cursor:pointer;font-weight:600;}
 .cal-table td.cell:hover{outline:2px solid var(--accent);outline-offset:-2px;}
-.cal-table td.finde{background:var(--finde);}
+/* Finde: marco fino dorado por dentro de la celda (con las líneas juntas no se
+   puede cambiar el borde de una sola, así que se dibuja con una sombra interior). */
+.cal-table td.finde{background:var(--finde);box-shadow:inset 0 0 0 1px var(--finde-borde);}
 .cal-table td.festivo{background:var(--festivo);}
 .cal-table tr.fuera-row td{background:var(--surface2);font-style:italic;color:var(--text-dim);}
 .cal-table tr.fuera-row td.alerta{background:var(--rojo-bg);color:var(--rojo);font-weight:700;font-style:normal;}
@@ -135,7 +137,7 @@ button{font-family:inherit;}
 .chip-x{background:var(--accent);}
 .chip-m{background:linear-gradient(135deg,var(--accent) 50%,var(--surface) 50%);}
 .chip-h{background:var(--amarillo);}
-.chip-finde{background:var(--finde);}
+.chip-finde{background:var(--finde);border-color:var(--finde-borde);}
 .chip-festivo{background:var(--festivo);}
 
 /* ----- Resumen ----- */
