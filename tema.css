@@ -10,22 +10,27 @@
   --maxw:1180px;
 }
 
-/* ---- CLARO ---- */
+/* ---- CLARO (el que se ve por defecto) ----
+   --bg  es el fondo de la portada: blanco, para que la madera se recorte
+         contra él igual que en la landing.
+   --app-bg es el fondo del calendario: el gris claro de siempre. */
 html[data-theme="light"]{
-  --bg:#fff;         --surface:#fff;      --surface2:#f6f7f5;
-  --text:#15171a;    --text-dim:#6b7177;  --ink:#15171a;
-  --border:#e6e7e4;  --border2:#d8d9d5;
+  --bg:#fff;         --app-bg:#f4f6fa;
+  --surface:#fff;    --surface2:#f0f2f6;
+  --text:#1f2733;    --text-dim:#6b7177;  --ink:#15171a;
+  --border:#dfe3ea;  --border2:#cdd3dd;
   --accent:#b8895b;  --accent-deep:#8a5e36;  --accent-soft:#f4ece2;
-  --shadow:0 24px 60px -28px rgba(20,22,26,.28);
-  --finde:#f0f1ee;   --festivo:#dcdcd7;   --celda:#fff;
+  --shadow:0 14px 34px -18px rgba(20,22,26,.30);
+  --finde:#e7eaef;   --festivo:#c9ccd3;   --celda:#fff;
   --rojo:#c9453f;    --amarillo:#c58c14;  --naranja:#c4691a;  --verde:#3a7d44;
   --rojo-bg:#fbeceb; --amarillo-bg:#fdf6e6; --naranja-bg:#fdf0e4;
   --fila-mia:#fbf6f0;
 }
 
-/* ---- OSCURO (el que se ve por defecto) ---- */
+/* ---- OSCURO ---- */
 html[data-theme="dark"]{
-  --bg:#101113;      --surface:#17181b;   --surface2:#1d1f23;
+  --bg:#101113;      --app-bg:#101113;
+  --surface:#17181b; --surface2:#1d1f23;
   --text:#f3f4f2;    --text-dim:#9aa0a4;  --ink:#f3f4f2;
   --border:#2a2c30;  --border2:#35383d;
   --accent:#d6a06b;  --accent-deep:#b8895b;  --accent-soft:#241d15;

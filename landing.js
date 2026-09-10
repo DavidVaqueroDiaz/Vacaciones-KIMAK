@@ -96,18 +96,34 @@
     g.fillStyle = vg; g.fillRect(0, WH*.72, WW, WH*.28);
   })();
 
-  // Si algún día se sube la foto de madera original (IMG/madera3.js define
-  // window.WOOD_SRC), se usa esa en su lugar y todo lo demás sigue igual.
+  // La madera buena es la foto del taller. Se busca por este orden:
+  //   1) window.WOOD_SRC  -> lo define IMG/madera3.js, que lleva la foto
+  //      convertida a texto. Es el único que funciona también al abrir el
+  //      archivo con doble clic (file://), porque así leer los píxeles no
+  //      está prohibido y el corte sale fino.
+  //   2) IMG/madera3.png  -> la foto normal. Vale servida desde la web.
+  //   3) si no hay ninguna de las dos, se queda el tablón dibujado por código,
+  //      que se ha pintado justo arriba. La portada nunca se ve vacía.
   let woodOK = true;
-  if (window.WOOD_SRC){
-    const img = new Image();
-    img.onload = () => {
-      wood.width = img.width; wood.height = img.height;
-      wood.getContext("2d").drawImage(img, 0, 0);
-      resize();
-    };
-    img.src = window.WOOD_SRC;
-  }
+  (function cargarMaderaReal(){
+    const fuentes = [];
+    if (window.WOOD_SRC) fuentes.push(window.WOOD_SRC);
+    fuentes.push("IMG/madera3.png");
+    let i = 0;
+    (function probar(){
+      if (i >= fuentes.length) return;      // se queda el tablón dibujado por código
+      const img = new Image();
+      img.onload = () => {
+        wood.width = img.width; wood.height = img.height;
+        const g = wood.getContext("2d");
+        g.clearRect(0, 0, wood.width, wood.height);
+        g.drawImage(img, 0, 0);
+        resize();
+      };
+      img.onerror = () => { i++; probar(); };
+      img.src = fuentes[i];
+    })();
+  })();
 
   let cv0 = {ox:0, oy:0, s:1};
   // CELL = rejilla invisible (detección); RC = grosor visible de la línea.

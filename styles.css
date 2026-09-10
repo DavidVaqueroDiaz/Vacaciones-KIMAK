@@ -8,7 +8,7 @@ body{
   margin:0;
   font-family:var(--font);
   color:var(--text);
-  background:var(--bg);
+  background:var(--app-bg);
   transition:background .5s var(--ease),color .5s var(--ease);
 }
 
@@ -53,7 +53,7 @@ body{
   border-radius:8px 8px 0 0;
   color:var(--text-dim);
 }
-.tab.active{background:var(--bg);font-weight:600;color:var(--accent);}
+.tab.active{background:var(--app-bg);font-weight:600;color:var(--accent);}
 
 .tab-panel{display:none;padding:18px 20px;}
 .tab-panel.active{display:block;}
@@ -195,7 +195,7 @@ button{font-family:inherit;}
 .primary-btn.full{width:100%;margin-top:6px;}
 
 /* ----- Acceso ----- */
-.login-screen{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:16px;z-index:40;}
+.login-screen{position:fixed;inset:0;background:var(--app-bg);display:flex;align-items:center;justify-content:center;padding:16px;z-index:40;}
 .login-card{
   background:var(--surface);border:1px solid var(--border);border-radius:14px;
   padding:28px;width:340px;max-width:100%;box-shadow:var(--shadow);

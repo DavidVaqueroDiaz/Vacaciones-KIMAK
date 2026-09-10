@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="es" data-theme="dark">
+<html lang="es" data-theme="light">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -19,22 +19,27 @@
   --maxw:1180px;
 }
 
-/* ---- CLARO ---- */
+/* ---- CLARO (el que se ve por defecto) ----
+   --bg  es el fondo de la portada: blanco, para que la madera se recorte
+         contra él igual que en la landing.
+   --app-bg es el fondo del calendario: el gris claro de siempre. */
 html[data-theme="light"]{
-  --bg:#fff;         --surface:#fff;      --surface2:#f6f7f5;
-  --text:#15171a;    --text-dim:#6b7177;  --ink:#15171a;
-  --border:#e6e7e4;  --border2:#d8d9d5;
+  --bg:#fff;         --app-bg:#f4f6fa;
+  --surface:#fff;    --surface2:#f0f2f6;
+  --text:#1f2733;    --text-dim:#6b7177;  --ink:#15171a;
+  --border:#dfe3ea;  --border2:#cdd3dd;
   --accent:#b8895b;  --accent-deep:#8a5e36;  --accent-soft:#f4ece2;
-  --shadow:0 24px 60px -28px rgba(20,22,26,.28);
-  --finde:#f0f1ee;   --festivo:#dcdcd7;   --celda:#fff;
+  --shadow:0 14px 34px -18px rgba(20,22,26,.30);
+  --finde:#e7eaef;   --festivo:#c9ccd3;   --celda:#fff;
   --rojo:#c9453f;    --amarillo:#c58c14;  --naranja:#c4691a;  --verde:#3a7d44;
   --rojo-bg:#fbeceb; --amarillo-bg:#fdf6e6; --naranja-bg:#fdf0e4;
   --fila-mia:#fbf6f0;
 }
 
-/* ---- OSCURO (el que se ve por defecto) ---- */
+/* ---- OSCURO ---- */
 html[data-theme="dark"]{
-  --bg:#101113;      --surface:#17181b;   --surface2:#1d1f23;
+  --bg:#101113;      --app-bg:#101113;
+  --surface:#17181b; --surface2:#1d1f23;
   --text:#f3f4f2;    --text-dim:#9aa0a4;  --ink:#f3f4f2;
   --border:#2a2c30;  --border2:#35383d;
   --accent:#d6a06b;  --accent-deep:#b8895b;  --accent-soft:#241d15;
@@ -247,7 +252,7 @@ body{
   margin:0;
   font-family:var(--font);
   color:var(--text);
-  background:var(--bg);
+  background:var(--app-bg);
   transition:background .5s var(--ease),color .5s var(--ease);
 }
 
@@ -292,7 +297,7 @@ body{
   border-radius:8px 8px 0 0;
   color:var(--text-dim);
 }
-.tab.active{background:var(--bg);font-weight:600;color:var(--accent);}
+.tab.active{background:var(--app-bg);font-weight:600;color:var(--accent);}
 
 .tab-panel{display:none;padding:18px 20px;}
 .tab-panel.active{display:block;}
@@ -434,7 +439,7 @@ button{font-family:inherit;}
 .primary-btn.full{width:100%;margin-top:6px;}
 
 /* ----- Acceso ----- */
-.login-screen{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:16px;z-index:40;}
+.login-screen{position:fixed;inset:0;background:var(--app-bg);display:flex;align-items:center;justify-content:center;padding:16px;z-index:40;}
 .login-card{
   background:var(--surface);border:1px solid var(--border);border-radius:14px;
   padding:28px;width:340px;max-width:100%;box-shadow:var(--shadow);
@@ -942,6 +947,10 @@ input:focus,select:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--a
   <div id="toast" class="toast"></div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <!-- La foto de madera del taller, convertida a texto (window.WOOD_SRC).
+       Si este archivo no está, la portada usa IMG/madera3.png y, si tampoco,
+       un tablón dibujado por código. Nunca se queda en blanco. -->
+  <script src="IMG/madera3.js"></script>
   <script>
 // ============================================================
 //  PORTADA — tema, corte de la madera y aparición al bajar
@@ -1041,18 +1050,34 @@ input:focus,select:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--a
     g.fillStyle = vg; g.fillRect(0, WH*.72, WW, WH*.28);
   })();
 
-  // Si algún día se sube la foto de madera original (IMG/madera3.js define
-  // window.WOOD_SRC), se usa esa en su lugar y todo lo demás sigue igual.
+  // La madera buena es la foto del taller. Se busca por este orden:
+  //   1) window.WOOD_SRC  -> lo define IMG/madera3.js, que lleva la foto
+  //      convertida a texto. Es el único que funciona también al abrir el
+  //      archivo con doble clic (file://), porque así leer los píxeles no
+  //      está prohibido y el corte sale fino.
+  //   2) IMG/madera3.png  -> la foto normal. Vale servida desde la web.
+  //   3) si no hay ninguna de las dos, se queda el tablón dibujado por código,
+  //      que se ha pintado justo arriba. La portada nunca se ve vacía.
   let woodOK = true;
-  if (window.WOOD_SRC){
-    const img = new Image();
-    img.onload = () => {
-      wood.width = img.width; wood.height = img.height;
-      wood.getContext("2d").drawImage(img, 0, 0);
-      resize();
-    };
-    img.src = window.WOOD_SRC;
-  }
+  (function cargarMaderaReal(){
+    const fuentes = [];
+    if (window.WOOD_SRC) fuentes.push(window.WOOD_SRC);
+    fuentes.push("IMG/madera3.png");
+    let i = 0;
+    (function probar(){
+      if (i >= fuentes.length) return;      // se queda el tablón dibujado por código
+      const img = new Image();
+      img.onload = () => {
+        wood.width = img.width; wood.height = img.height;
+        const g = wood.getContext("2d");
+        g.clearRect(0, 0, wood.width, wood.height);
+        g.drawImage(img, 0, 0);
+        resize();
+      };
+      img.onerror = () => { i++; probar(); };
+      img.src = fuentes[i];
+    })();
+  })();
 
   let cv0 = {ox:0, oy:0, s:1};
   // CELL = rejilla invisible (detección); RC = grosor visible de la línea.
