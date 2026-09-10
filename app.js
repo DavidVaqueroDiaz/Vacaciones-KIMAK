@@ -386,12 +386,20 @@ function renderAnio(){
         const f = ymd(y,m,day);
         let cls = "", style = "", title = "";
         if (modoTodos){
-          // Semáforo: amarillo si falta alguien, naranja casi la mitad, rojo la mitad o más
-          const nivel = nivelFuera(f);
-          if (nivel){
-            cls = "sem sem" + nivel;
-            const quienes = quienesFuera(f);
+          // El círculo se reparte entre los colores de quienes están fuera ese día
+          const quienes = quienesFuera(f);
+          if (quienes.length){
+            cls = "dia-x";
             title = esc(quienes.map(q=>q.nombre).join(", "));
+            if (quienes.length === 1){
+              style = `background:#${hex(quienes[0].color)}`;
+            } else if (quienes.length === 2){
+              style = `background:linear-gradient(90deg,#${hex(quienes[0].color)} 0 50%,#${hex(quienes[1].color)} 50% 100%)`;
+            } else {
+              const segs = quienes.map((q,i) =>
+                `#${hex(q.color)} ${Math.round(i*360/quienes.length)}deg ${Math.round((i+1)*360/quienes.length)}deg`).join(",");
+              style = `background:conic-gradient(${segs})`;
+            }
           }
           else if (esFestivo(f)) cls = "festivo";
           else if (esFinde(y,m,day)) cls = "finde";
