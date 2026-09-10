@@ -179,7 +179,10 @@
   // Las partículas se guardan en coordenadas de PÁGINA. El lienzo va fijo a la
   // pantalla, así que al pintar se les resta el scroll. Lo que ya ha caído no
   // se sigue simulando: se estampa de una vez en el lienzo del montón.
-  const ALTO_PILA = 300, COL = 6, VMAX = 12, MAX_VIRUTAS = 700;
+  // El lienzo del montón se hace de sobra: un trozo grande de tablón puede
+  // medir media franja de madera, y girado ocupa aún más. Si se queda corto,
+  // el trozo aparece cortado por el borde. Los lados también llevan holgura.
+  const ALTO_PILA = 640, PAD_PILA = 160, COL = 6, VMAX = 12, MAX_VIRUTAS = 700;
   const pilaCv = document.createElement("canvas");
   let pctx = null, altura = null, colsPila = 0, hayPila = false;
   let sueloY = 0, heroOff = {x:0, y:0};
@@ -193,9 +196,9 @@
     ) - 4;
   }
   function prepararPila(){
-    pilaCv.width = Math.max(1, innerWidth); pilaCv.height = ALTO_PILA;
+    pilaCv.width = Math.max(1, innerWidth + PAD_PILA*2); pilaCv.height = ALTO_PILA;
     pctx = pilaCv.getContext("2d");
-    colsPila = Math.ceil(pilaCv.width/COL) + 1;
+    colsPila = Math.ceil(innerWidth/COL) + 1;   // el mapa de alturas va en x de página
     altura = new Float32Array(colsPila);
     hayPila = false;
   }
@@ -381,8 +384,12 @@
   function posarTrozo(p, tope){
     if (pctx){
       const cx = p.x + p.img.width/2, cy = tope - p.img.height/2;
+      // si el trozo asomara por arriba del lienzo, se hunde un poco en el
+      // montón en vez de salir cortado
+      const radio = Math.hypot(p.img.width, p.img.height)/2;
+      const yp = Math.min(ALTO_PILA-4, Math.max(Math.min(radio, ALTO_PILA/2), cy - techoPila()));
       pctx.save();
-      pctx.translate(cx, cy - techoPila()); pctx.rotate(p.rot);
+      pctx.translate(cx + PAD_PILA, yp); pctx.rotate(p.rot);
       pctx.drawImage(p.img, -p.img.width/2, -p.img.height/2);
       pctx.restore();
       subirPila(cx, p.img.height*0.45, p.img.width);
@@ -392,7 +399,7 @@
   function posarViruta(s, tope){
     if (pctx){
       s.y = tope;
-      draw(s, 1, pctx, 0, techoPila());
+      draw(s, 1, pctx, -PAD_PILA, techoPila());
       subirPila(s.x, 1.1, Math.max(6, s.w*2));
       hayPila = true;
     }
@@ -403,7 +410,7 @@
     ctx.clearRect(0, 0, cv.width, cv.height);
     const sx = scrollX, sy = scrollY;
     // el montón acumulado, pintado de una sola pasada
-    if (hayPila) ctx.drawImage(pilaCv, -sx, techoPila() - sy);
+    if (hayPila) ctx.drawImage(pilaCv, -PAD_PILA - sx, techoPila() - sy);
 
     const fk = [];
     for (const p of falling){

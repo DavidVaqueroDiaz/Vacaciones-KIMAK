@@ -33,9 +33,13 @@ html{scroll-behavior:smooth;}
   text-align:center;padding:130px 24px 90px;position:relative;overflow:hidden;background:var(--bg);
 }
 #heroWood{position:absolute;inset:0;z-index:0;pointer-events:none;}
-/* Fijo a la pantalla y por encima del contenido: así el serrín cae por toda
-   la portada y se amontona al final, en vez de quedarse en el héroe. */
-#heroFx{position:fixed;inset:0;z-index:40;pointer-events:none;}
+/* Fijo a la pantalla, para que el serrín caiga por toda la portada y se
+   amontone al final en vez de quedarse en el héroe.
+   Queda POR ENCIMA del héroe (si no, el tablón taparía las virutas al salir
+   del corte) y POR DEBAJO de lo que viene después, que va en la capa 2. */
+#heroFx{position:fixed;inset:0;z-index:1;pointer-events:none;}
+#portada .hero{z-index:0;}
+#portada .block,#portada .cierre,#portada .pie{position:relative;z-index:2;}
 #portada .hero>*:not(canvas){position:relative;z-index:2;}
 /* La firma vive DEBAJO de la madera: misma altura de capa que el tablón, pero
    antes en el HTML, así que la madera la tapa hasta que la recortas.
