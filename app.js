@@ -81,20 +81,8 @@ function horasDelEquipo(y, m, d){
   });
   return { teoricas, disponibles };
 }
-// Nivel de ocupación de un día, para el semáforo de la vista anual:
-// 0 = nadie fuera · 1 = alguno · 2 = casi la mitad · 3 = la mitad o más
-function nivelFuera(fecha){
-  const pers = personasDep().filter(p => activaEn(p, fecha));
-  if (!pers.length) return 0;
-  let fuera = 0;
-  pers.forEach(p => { const v = state.marcas.get(key(p.id,fecha)); if (v==="X"||v==="M") fuera++; });
-  if (!fuera) return 0;
-  const r = fuera / pers.length;
-  if (r >= 0.5)   return 3;
-  if (r >= 1/3)   return 2;
-  return 1;
-}
-// Nombres de quienes están fuera ese día (para el texto al pasar el cursor)
+// Quiénes están fuera ese día: da el color de cada uno para repartir el
+// círculo en la vista anual, y sus nombres para el texto al pasar el cursor.
 function quienesFuera(fecha){
   return personasDep().filter(p => {
     const v = state.marcas.get(key(p.id,fecha));

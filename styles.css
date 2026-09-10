@@ -268,16 +268,6 @@ button{font-family:inherit;}
 .semana-card .sc-horas{font-size:19px;font-weight:700;color:var(--azul);}
 .semana-card .sc-tot{font-size:11px;color:#99a;}
 
-/* ----- Semáforo de ocupación (vista anual) ----- */
-.mini-tabla td.sem .d{font-weight:700;color:#3d3016;}
-.mini-tabla td.sem1 .d{background:#ffe08a;}
-.mini-tabla td.sem2 .d{background:#f7a95c;}
-.mini-tabla td.sem3 .d{background:#ea6a5e;color:#fff;}
-.chip-sem{display:inline-block;width:14px;height:14px;border-radius:50%;border:1px solid #cfd4dd;margin-left:6px;}
-.chip-sem.sem1{background:#ffe08a;}
-.chip-sem.sem2{background:#f7a95c;}
-.chip-sem.sem3{background:#ea6a5e;}
-
 
 /* ============================================================
    ANIMACIONES Y MICRO-INTERACCIONES

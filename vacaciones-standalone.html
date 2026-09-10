@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <!-- Capa extra de seguridad: el navegador solo ejecuta scripts de esta web y
        de Supabase, y solo permite conexiones a Supabase. Bloquea inyecciones. -->
-  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; connect-src https://*.supabase.co wss://*.supabase.co; img-src 'self' data:; font-src 'self'; form-action 'none'; base-uri 'none'; frame-ancestors 'none'" />
   <title>Calendario de Vacaciones</title>
   <style>
 :root{
@@ -277,16 +276,6 @@ button{font-family:inherit;}
 .semana-card .sc-dias{font-size:11px;color:#788;}
 .semana-card .sc-horas{font-size:19px;font-weight:700;color:var(--azul);}
 .semana-card .sc-tot{font-size:11px;color:#99a;}
-
-/* ----- Semáforo de ocupación (vista anual) ----- */
-.mini-tabla td.sem .d{font-weight:700;color:#3d3016;}
-.mini-tabla td.sem1 .d{background:#ffe08a;}
-.mini-tabla td.sem2 .d{background:#f7a95c;}
-.mini-tabla td.sem3 .d{background:#ea6a5e;color:#fff;}
-.chip-sem{display:inline-block;width:14px;height:14px;border-radius:50%;border:1px solid #cfd4dd;margin-left:6px;}
-.chip-sem.sem1{background:#ffe08a;}
-.chip-sem.sem2{background:#f7a95c;}
-.chip-sem.sem3{background:#ea6a5e;}
 
 
 /* ============================================================
@@ -981,20 +970,8 @@ function horasDelEquipo(y, m, d){
   });
   return { teoricas, disponibles };
 }
-// Nivel de ocupación de un día, para el semáforo de la vista anual:
-// 0 = nadie fuera · 1 = alguno · 2 = casi la mitad · 3 = la mitad o más
-function nivelFuera(fecha){
-  const pers = personasDep().filter(p => activaEn(p, fecha));
-  if (!pers.length) return 0;
-  let fuera = 0;
-  pers.forEach(p => { const v = state.marcas.get(key(p.id,fecha)); if (v==="X"||v==="M") fuera++; });
-  if (!fuera) return 0;
-  const r = fuera / pers.length;
-  if (r >= 0.5)   return 3;
-  if (r >= 1/3)   return 2;
-  return 1;
-}
-// Nombres de quienes están fuera ese día (para el texto al pasar el cursor)
+// Quiénes están fuera ese día: da el color de cada uno para repartir el
+// círculo en la vista anual, y sus nombres para el texto al pasar el cursor.
 function quienesFuera(fecha){
   return personasDep().filter(p => {
     const v = state.marcas.get(key(p.id,fecha));
