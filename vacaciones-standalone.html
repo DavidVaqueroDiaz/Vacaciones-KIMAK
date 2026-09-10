@@ -31,6 +31,7 @@ html[data-theme="light"]{
   --accent:#b8895b;  --accent-deep:#8a5e36;  --accent-soft:#f4ece2;
   --shadow:0 14px 34px -18px rgba(20,22,26,.30);
   --finde:#e7eaef;   --festivo:#c9ccd3;   --celda:#fff;
+  --thead-bg:#2f333a;   --thead-fg:#e6c096;   /* cabecera de días: oscura */
   --rojo:#c9453f;    --amarillo:#c58c14;  --naranja:#c4691a;  --verde:#3a7d44;
   --rojo-bg:#fbeceb; --amarillo-bg:#fdf6e6; --naranja-bg:#fdf0e4;
   --fila-mia:#fbf6f0;
@@ -45,6 +46,7 @@ html[data-theme="dark"]{
   --accent:#d6a06b;  --accent-deep:#b8895b;  --accent-soft:#241d15;
   --shadow:0 24px 60px -24px rgba(0,0,0,.7);
   --finde:#191b1f;   --festivo:#303338;   --celda:#17181b;
+  --thead-bg:#0b0c0e;   --thead-fg:#d6a06b;
   --rojo:#e2685f;    --amarillo:#e0ab3c;  --naranja:#dd8033;  --verde:#63b06e;
   --rojo-bg:#2a1a19; --amarillo-bg:#282013; --naranja-bg:#2a1e14;
   --fila-mia:#1c1a17;
@@ -359,9 +361,9 @@ button{font-family:inherit;}
   font-weight:600;
   white-space:nowrap;
 }
-.cal-table thead th{background:var(--surface2);color:var(--accent);font-weight:700;}
-.cal-table thead th.persona-col{background:var(--surface2);}
-.cal-table thead th.dow{font-size:10px;font-weight:400;color:var(--text-dim);}
+.cal-table thead th{background:var(--thead-bg);color:var(--thead-fg);font-weight:700;}
+.cal-table thead th.persona-col{background:var(--thead-bg);color:var(--thead-fg);}
+.cal-table thead th.dow{font-size:10px;font-weight:400;color:var(--thead-fg);opacity:.72;}
 .cal-table td.cell{cursor:pointer;font-weight:600;}
 .cal-table td.cell:hover{outline:2px solid var(--accent);outline-offset:-2px;}
 .cal-table td.finde{background:var(--finde);}
@@ -385,7 +387,7 @@ button{font-family:inherit;}
 /* ----- Resumen ----- */
 .resumen-table{border-collapse:collapse;width:100%;font-size:13px;background:var(--surface);}
 .resumen-table th,.resumen-table td{border:1px solid var(--border);padding:6px 8px;text-align:center;}
-.resumen-table th{background:var(--surface2);color:var(--accent);}
+.resumen-table th{background:var(--thead-bg);color:var(--thead-fg);}
 .resumen-table td.nombre{text-align:left;font-weight:600;white-space:nowrap;}
 .resumen-table td.sep{background:var(--surface2);}
 .resumen-table tr:nth-child(even) td{
