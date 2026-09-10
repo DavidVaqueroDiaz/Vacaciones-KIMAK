@@ -1,0 +1,73 @@
+/* ============================================================
+   TEMA COMPARTIDO — portada y aplicación
+   Los mismos tokens que la landing de KLIN: negro con detalles
+   dorados en oscuro, y una versión clara por si alguien la prefiere.
+   Se cambia con el interruptor de la esquina y se recuerda.
+   ============================================================ */
+:root{
+  --font:"Segoe UI",-apple-system,BlinkMacSystemFont,Roboto,Helvetica,Arial,sans-serif;
+  --ease:cubic-bezier(.22,1,.36,1);
+  --maxw:1180px;
+}
+
+/* ---- CLARO ---- */
+html[data-theme="light"]{
+  --bg:#fff;         --surface:#fff;      --surface2:#f6f7f5;
+  --text:#15171a;    --text-dim:#6b7177;  --ink:#15171a;
+  --border:#e6e7e4;  --border2:#d8d9d5;
+  --accent:#b8895b;  --accent-deep:#8a5e36;  --accent-soft:#f4ece2;
+  --shadow:0 24px 60px -28px rgba(20,22,26,.28);
+  --finde:#f0f1ee;   --festivo:#dcdcd7;   --celda:#fff;
+  --rojo:#c9453f;    --amarillo:#c58c14;  --naranja:#c4691a;  --verde:#3a7d44;
+  --rojo-bg:#fbeceb; --amarillo-bg:#fdf6e6; --naranja-bg:#fdf0e4;
+  --fila-mia:#fbf6f0;
+}
+
+/* ---- OSCURO (el que se ve por defecto) ---- */
+html[data-theme="dark"]{
+  --bg:#101113;      --surface:#17181b;   --surface2:#1d1f23;
+  --text:#f3f4f2;    --text-dim:#9aa0a4;  --ink:#f3f4f2;
+  --border:#2a2c30;  --border2:#35383d;
+  --accent:#d6a06b;  --accent-deep:#b8895b;  --accent-soft:#241d15;
+  --shadow:0 24px 60px -24px rgba(0,0,0,.7);
+  --finde:#191b1f;   --festivo:#303338;   --celda:#17181b;
+  --rojo:#e2685f;    --amarillo:#e0ab3c;  --naranja:#dd8033;  --verde:#63b06e;
+  --rojo-bg:#2a1a19; --amarillo-bg:#282013; --naranja-bg:#2a1e14;
+  --fila-mia:#1c1a17;
+}
+
+*{box-sizing:border-box;}
+
+/* ---- Interruptor de tema ---- */
+.toggle{
+  width:44px;height:26px;border-radius:20px;border:1px solid var(--border);
+  background:var(--surface2);position:relative;cursor:pointer;flex-shrink:0;padding:0;
+}
+.toggle .knob{
+  position:absolute;top:2px;left:2px;width:20px;height:20px;border-radius:50%;
+  background:var(--accent);transition:transform .35s var(--ease);
+  display:grid;place-items:center;color:#15171a;
+}
+.toggle .knob svg{width:12px;height:12px;}
+html[data-theme="dark"] .toggle .knob{transform:translateX(18px);}
+
+/* ---- Botones de la portada ---- */
+.btn{
+  font:inherit;font-size:14px;font-weight:600;padding:12px 26px;border-radius:999px;
+  cursor:pointer;border:1px solid transparent;text-decoration:none;
+  display:inline-flex;align-items:center;gap:8px;
+  transition:transform .2s var(--ease),box-shadow .3s,background .3s,border-color .3s,color .3s;
+}
+.btn-primary{color:var(--bg);background:var(--ink);border-color:var(--ink);}
+.btn-primary:hover{transform:translateY(-2px);box-shadow:var(--shadow);background:var(--accent-deep);border-color:var(--accent-deep);color:#fff;}
+.btn-ghost{color:var(--text);border:1px solid var(--border2);background:transparent;}
+.btn-ghost:hover{border-color:var(--accent);color:var(--accent);transform:translateY(-2px);}
+
+/* ---- Aparecer al bajar ---- */
+.reveal{opacity:0;transform:translateY(40px);transition:opacity .8s var(--ease),transform .8s var(--ease);}
+.reveal.in{opacity:1;transform:translateY(0);}
+
+@media (prefers-reduced-motion:reduce){
+  *{animation:none!important;transition:none!important;}
+  .reveal{opacity:1;transform:none;}
+}

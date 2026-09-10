@@ -1,0 +1,151 @@
+/* ============================================================
+   PORTADA
+   El héroe con la madera que se corta viene de la landing de KLIN.
+   El resto explica esta aplicación, no aquella.
+   Todo va acotado a #portada para no pisar los estilos del calendario,
+   que vive en la misma página.
+   ============================================================ */
+html{scroll-behavior:smooth;}
+
+#portada{
+  font-family:var(--font);background:var(--bg);color:var(--text);
+  line-height:1.65;overflow-x:hidden;
+}
+
+/* ===== CABECERA ===== */
+#portada .top{
+  position:fixed;top:0;left:0;right:0;z-index:50;display:flex;align-items:center;
+  justify-content:space-between;padding:22px 40px;transition:all .4s var(--ease);
+}
+#portada .top.scrolled{
+  padding:13px 40px;
+  background:var(--bg);                                    /* si el navegador es antiguo */
+  background:color-mix(in srgb,var(--bg) 82%,transparent); /* si entiende color-mix */
+  backdrop-filter:blur(16px);border-bottom:1px solid var(--border);
+}
+#portada .logo{font-weight:800;letter-spacing:4px;font-size:20px;}
+#portada .logo em{font-style:normal;color:var(--accent);}
+#portada .nav-right{display:flex;align-items:center;gap:16px;}
+
+/* ===== HÉROE ===== */
+#portada .hero{
+  min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  text-align:center;padding:130px 24px 90px;position:relative;overflow:hidden;background:var(--bg);
+}
+#heroWood{position:absolute;inset:0;z-index:0;pointer-events:none;}
+#heroFx{position:absolute;inset:0;z-index:1;pointer-events:none;}
+#portada .hero>*:not(canvas){position:relative;z-index:2;}
+#portada .hero h1{text-shadow:0 2px 18px rgba(0,0,0,.18);}
+#portada .hero .eyebrow,#portada .hero .tagline{text-shadow:0 0 7px var(--bg),0 0 14px var(--bg);}
+#portada .eyebrow{
+  font-size:12px;letter-spacing:5px;text-transform:uppercase;color:var(--accent);
+  font-weight:700;margin-bottom:26px;opacity:0;animation:fadeUp .8s var(--ease) .1s forwards;
+}
+#portada .hero h1{
+  font-size:clamp(46px,11vw,150px);font-weight:800;letter-spacing:clamp(3px,1.2vw,12px);
+  line-height:.92;color:var(--ink);margin:0;opacity:0;animation:dropIn .8s var(--ease) .2s forwards;
+}
+#portada .tagline{
+  font-size:clamp(13px,2.4vw,19px);letter-spacing:6px;color:var(--text-dim);text-transform:lowercase;
+  margin-top:18px;font-weight:300;font-style:italic;opacity:0;animation:fadeUp .9s var(--ease) .7s forwards;
+}
+#portada .cta-row{
+  margin-top:40px;display:flex;gap:14px;flex-wrap:wrap;justify-content:center;
+  opacity:0;animation:fadeUp .9s var(--ease) 1s forwards;
+}
+#portada .cut-hint{
+  margin-top:26px;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--text-dim);
+  opacity:0;animation:fadeUp 1s var(--ease) 1.2s forwards;
+}
+#portada .scroll-cue{
+  position:absolute;bottom:30px;left:50%;transform:translateX(-50%);color:var(--text-dim);
+  font-size:11px;letter-spacing:2px;display:flex;flex-direction:column;align-items:center;gap:8px;
+  opacity:0;animation:fadeUp 1s var(--ease) 1.4s forwards;
+}
+#portada .scroll-cue .mouse{width:22px;height:36px;border:2px solid var(--text-dim);border-radius:12px;position:relative;}
+#portada .scroll-cue .mouse::after{
+  content:"";position:absolute;top:6px;left:50%;transform:translateX(-50%);
+  width:4px;height:8px;border-radius:2px;background:var(--accent);animation:wheel 1.5s ease-in-out infinite;
+}
+@keyframes wheel{0%{opacity:1;top:6px}70%{opacity:0;top:18px}100%{opacity:0}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:translateY(0)}}
+@keyframes dropIn{from{opacity:0;transform:translateY(-40px)}to{opacity:1;transform:translateY(0)}}
+
+/* ===== SECCIONES ===== */
+#portada .block{max-width:var(--maxw);margin:0 auto;padding:100px 24px;}
+#portada .s-eyebrow{font-size:12px;letter-spacing:4px;text-transform:uppercase;color:var(--accent);font-weight:700;}
+#portada .s-title{font-size:clamp(28px,5vw,46px);font-weight:700;margin:14px 0 16px;letter-spacing:-.5px;line-height:1.1;}
+#portada .s-sub{color:var(--text-dim);max-width:640px;font-size:17px;margin:0 auto;}
+#portada .features-head{text-align:center;max-width:700px;margin:0 auto;}
+
+/* ===== TARJETAS DE "CÓMO FUNCIONA" ===== */
+#portada .pasos{display:grid;grid-template-columns:repeat(2,1fr);gap:30px;margin:60px auto 0;max-width:960px;}
+#portada .paso{
+  border:1px solid var(--border);border-radius:16px;background:var(--surface);padding:26px 28px 24px;
+  position:relative;overflow:hidden;transition:transform .3s var(--ease),box-shadow .3s,border-color .3s;
+}
+#portada .paso:hover{transform:translateY(-4px);box-shadow:var(--shadow);border-color:var(--accent-deep);}
+#portada .paso .num{
+  position:absolute;top:16px;right:20px;font-size:11px;letter-spacing:2px;font-weight:700;
+  color:var(--accent);opacity:.7;
+}
+#portada .paso h3{font-size:19px;font-weight:700;margin:0 0 8px;}
+#portada .paso p{color:var(--text-dim);font-size:14.5px;margin:0;}
+#portada .paso .demo{
+  height:132px;margin-bottom:18px;border-radius:10px;background:var(--surface2);
+  border:1px solid var(--border);display:grid;place-items:center;overflow:hidden;
+}
+@media(max-width:760px){#portada .pasos{grid-template-columns:1fr;}}
+
+/* --- mini calendario que se va pintando --- */
+#portada .mini{display:grid;grid-template-columns:repeat(7,15px);gap:5px;}
+#portada .mini i{width:15px;height:15px;border-radius:50%;background:var(--border2);display:block;font-style:normal;}
+#portada .paso:hover .mini i.p{animation:pintar .5s var(--ease) forwards;}
+#portada .paso:hover .mini i.p:nth-child(10){animation-delay:.06s;}
+#portada .paso:hover .mini i.p:nth-child(11){animation-delay:.12s;}
+#portada .paso:hover .mini i.p:nth-child(12){animation-delay:.18s;}
+@keyframes pintar{to{background:var(--accent);transform:scale(1.16);}}
+
+/* --- círculos repartidos entre varias personas --- */
+#portada .repartido{display:flex;gap:14px;align-items:center;}
+#portada .repartido b{width:34px;height:34px;border-radius:50%;display:block;transition:transform .35s var(--ease);}
+#portada .paso:hover .repartido b{transform:translateY(-4px) scale(1.1);}
+#portada .paso:hover .repartido b:nth-child(2){transition-delay:.06s;}
+#portada .paso:hover .repartido b:nth-child(3){transition-delay:.12s;}
+#portada .paso:hover .repartido b:nth-child(4){transition-delay:.18s;}
+
+/* --- tarjetas de horas con semáforo --- */
+#portada .semaforo{display:flex;gap:10px;}
+#portada .semaforo span{
+  width:52px;height:62px;border-radius:8px;border:1px solid var(--border2);
+  border-left:4px solid var(--verde);background:var(--surface);transition:transform .35s var(--ease);
+}
+#portada .semaforo span.a{border-left-color:var(--amarillo);}
+#portada .semaforo span.n{border-left-color:var(--naranja);}
+#portada .semaforo span.r{border-left-color:var(--rojo);}
+#portada .paso:hover .semaforo span{transform:translateY(-5px);}
+#portada .paso:hover .semaforo span.a{transition-delay:.05s;}
+#portada .paso:hover .semaforo span.n{transition-delay:.1s;}
+#portada .paso:hover .semaforo span.r{transition-delay:.15s;}
+
+/* --- filas: solo la tuya se mueve --- */
+#portada .filas{display:flex;flex-direction:column;gap:7px;width:190px;}
+#portada .filas span{
+  height:15px;border-radius:4px;background:var(--border2);
+  transition:background .35s var(--ease),transform .35s var(--ease),opacity .35s var(--ease);
+}
+#portada .filas span.mia{background:var(--accent);}
+#portada .paso:hover .filas span.mia{transform:translateX(9px);}
+#portada .paso:hover .filas span:not(.mia){opacity:.4;}
+
+/* ===== CIERRE ===== */
+#portada .cierre{text-align:center;padding:110px 24px 96px;}
+#portada .cierre h2{font-size:clamp(30px,6vw,64px);font-weight:800;letter-spacing:clamp(2px,.8vw,8px);color:var(--ink);margin:0;}
+#portada .cierre .t2{color:var(--text-dim);font-style:italic;letter-spacing:6px;margin:16px 0 34px;}
+#portada .pie{border-top:1px solid var(--border);padding:30px 40px;text-align:center;color:var(--text-dim);font-size:13px;}
+
+@media(max-width:640px){
+  #portada .top{padding:16px 20px;}
+  #portada .top.scrolled{padding:11px 20px;}
+  #portada .block{padding:70px 20px;}
+}

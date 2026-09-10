@@ -1,67 +1,298 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="es" data-theme="dark">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <!-- Capa extra de seguridad: el navegador solo ejecuta scripts de esta web y
        de Supabase, y solo permite conexiones a Supabase. Bloquea inyecciones. -->
-  <title>Calendario de Vacaciones</title>
+  <title>Vacaciones · Grupo KIMAK</title>
   <style>
+/* ============================================================
+   TEMA COMPARTIDO — portada y aplicación
+   Los mismos tokens que la landing de KLIN: negro con detalles
+   dorados en oscuro, y una versión clara por si alguien la prefiere.
+   Se cambia con el interruptor de la esquina y se recuerda.
+   ============================================================ */
 :root{
-  --azul:#2f3b52;
-  --azul2:#4472c4;
-  --amarillo:#fff2cc;
-  --gris-borde:#d9dee8;
-  --finde:#e4e7ec;
-  --finde-vac:#e8eaef;
-  --festivo:#b9bec7;
-  --texto:#1f2733;
-  --rojo:#d9534f;
+  --font:"Segoe UI",-apple-system,BlinkMacSystemFont,Roboto,Helvetica,Arial,sans-serif;
+  --ease:cubic-bezier(.22,1,.36,1);
+  --maxw:1180px;
+}
+
+/* ---- CLARO ---- */
+html[data-theme="light"]{
+  --bg:#fff;         --surface:#fff;      --surface2:#f6f7f5;
+  --text:#15171a;    --text-dim:#6b7177;  --ink:#15171a;
+  --border:#e6e7e4;  --border2:#d8d9d5;
+  --accent:#b8895b;  --accent-deep:#8a5e36;  --accent-soft:#f4ece2;
+  --shadow:0 24px 60px -28px rgba(20,22,26,.28);
+  --finde:#f0f1ee;   --festivo:#dcdcd7;   --celda:#fff;
+  --rojo:#c9453f;    --amarillo:#c58c14;  --naranja:#c4691a;  --verde:#3a7d44;
+  --rojo-bg:#fbeceb; --amarillo-bg:#fdf6e6; --naranja-bg:#fdf0e4;
+  --fila-mia:#fbf6f0;
+}
+
+/* ---- OSCURO (el que se ve por defecto) ---- */
+html[data-theme="dark"]{
+  --bg:#101113;      --surface:#17181b;   --surface2:#1d1f23;
+  --text:#f3f4f2;    --text-dim:#9aa0a4;  --ink:#f3f4f2;
+  --border:#2a2c30;  --border2:#35383d;
+  --accent:#d6a06b;  --accent-deep:#b8895b;  --accent-soft:#241d15;
+  --shadow:0 24px 60px -24px rgba(0,0,0,.7);
+  --finde:#191b1f;   --festivo:#303338;   --celda:#17181b;
+  --rojo:#e2685f;    --amarillo:#e0ab3c;  --naranja:#dd8033;  --verde:#63b06e;
+  --rojo-bg:#2a1a19; --amarillo-bg:#282013; --naranja-bg:#2a1e14;
+  --fila-mia:#1c1a17;
 }
 
 *{box-sizing:border-box;}
-body{
-  margin:0;
-  font-family:"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
-  color:var(--texto);
-  background:#f4f6fa;
+
+/* ---- Interruptor de tema ---- */
+.toggle{
+  width:44px;height:26px;border-radius:20px;border:1px solid var(--border);
+  background:var(--surface2);position:relative;cursor:pointer;flex-shrink:0;padding:0;
+}
+.toggle .knob{
+  position:absolute;top:2px;left:2px;width:20px;height:20px;border-radius:50%;
+  background:var(--accent);transition:transform .35s var(--ease);
+  display:grid;place-items:center;color:#15171a;
+}
+.toggle .knob svg{width:12px;height:12px;}
+html[data-theme="dark"] .toggle .knob{transform:translateX(18px);}
+
+/* ---- Botones de la portada ---- */
+.btn{
+  font:inherit;font-size:14px;font-weight:600;padding:12px 26px;border-radius:999px;
+  cursor:pointer;border:1px solid transparent;text-decoration:none;
+  display:inline-flex;align-items:center;gap:8px;
+  transition:transform .2s var(--ease),box-shadow .3s,background .3s,border-color .3s,color .3s;
+}
+.btn-primary{color:var(--bg);background:var(--ink);border-color:var(--ink);}
+.btn-primary:hover{transform:translateY(-2px);box-shadow:var(--shadow);background:var(--accent-deep);border-color:var(--accent-deep);color:#fff;}
+.btn-ghost{color:var(--text);border:1px solid var(--border2);background:transparent;}
+.btn-ghost:hover{border-color:var(--accent);color:var(--accent);transform:translateY(-2px);}
+
+/* ---- Aparecer al bajar ---- */
+.reveal{opacity:0;transform:translateY(40px);transition:opacity .8s var(--ease),transform .8s var(--ease);}
+.reveal.in{opacity:1;transform:translateY(0);}
+
+@media (prefers-reduced-motion:reduce){
+  *{animation:none!important;transition:none!important;}
+  .reveal{opacity:1;transform:none;}
 }
 
+</style>
+  <style>
+/* ============================================================
+   PORTADA
+   El héroe con la madera que se corta viene de la landing de KLIN.
+   El resto explica esta aplicación, no aquella.
+   Todo va acotado a #portada para no pisar los estilos del calendario,
+   que vive en la misma página.
+   ============================================================ */
+html{scroll-behavior:smooth;}
+
+#portada{
+  font-family:var(--font);background:var(--bg);color:var(--text);
+  line-height:1.65;overflow-x:hidden;
+}
+
+/* ===== CABECERA ===== */
+#portada .top{
+  position:fixed;top:0;left:0;right:0;z-index:50;display:flex;align-items:center;
+  justify-content:space-between;padding:22px 40px;transition:all .4s var(--ease);
+}
+#portada .top.scrolled{
+  padding:13px 40px;
+  background:var(--bg);                                    /* si el navegador es antiguo */
+  background:color-mix(in srgb,var(--bg) 82%,transparent); /* si entiende color-mix */
+  backdrop-filter:blur(16px);border-bottom:1px solid var(--border);
+}
+#portada .logo{font-weight:800;letter-spacing:4px;font-size:20px;}
+#portada .logo em{font-style:normal;color:var(--accent);}
+#portada .nav-right{display:flex;align-items:center;gap:16px;}
+
+/* ===== HÉROE ===== */
+#portada .hero{
+  min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  text-align:center;padding:130px 24px 90px;position:relative;overflow:hidden;background:var(--bg);
+}
+#heroWood{position:absolute;inset:0;z-index:0;pointer-events:none;}
+#heroFx{position:absolute;inset:0;z-index:1;pointer-events:none;}
+#portada .hero>*:not(canvas){position:relative;z-index:2;}
+#portada .hero h1{text-shadow:0 2px 18px rgba(0,0,0,.18);}
+#portada .hero .eyebrow,#portada .hero .tagline{text-shadow:0 0 7px var(--bg),0 0 14px var(--bg);}
+#portada .eyebrow{
+  font-size:12px;letter-spacing:5px;text-transform:uppercase;color:var(--accent);
+  font-weight:700;margin-bottom:26px;opacity:0;animation:fadeUp .8s var(--ease) .1s forwards;
+}
+#portada .hero h1{
+  font-size:clamp(46px,11vw,150px);font-weight:800;letter-spacing:clamp(3px,1.2vw,12px);
+  line-height:.92;color:var(--ink);margin:0;opacity:0;animation:dropIn .8s var(--ease) .2s forwards;
+}
+#portada .tagline{
+  font-size:clamp(13px,2.4vw,19px);letter-spacing:6px;color:var(--text-dim);text-transform:lowercase;
+  margin-top:18px;font-weight:300;font-style:italic;opacity:0;animation:fadeUp .9s var(--ease) .7s forwards;
+}
+#portada .cta-row{
+  margin-top:40px;display:flex;gap:14px;flex-wrap:wrap;justify-content:center;
+  opacity:0;animation:fadeUp .9s var(--ease) 1s forwards;
+}
+#portada .cut-hint{
+  margin-top:26px;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--text-dim);
+  opacity:0;animation:fadeUp 1s var(--ease) 1.2s forwards;
+}
+#portada .scroll-cue{
+  position:absolute;bottom:30px;left:50%;transform:translateX(-50%);color:var(--text-dim);
+  font-size:11px;letter-spacing:2px;display:flex;flex-direction:column;align-items:center;gap:8px;
+  opacity:0;animation:fadeUp 1s var(--ease) 1.4s forwards;
+}
+#portada .scroll-cue .mouse{width:22px;height:36px;border:2px solid var(--text-dim);border-radius:12px;position:relative;}
+#portada .scroll-cue .mouse::after{
+  content:"";position:absolute;top:6px;left:50%;transform:translateX(-50%);
+  width:4px;height:8px;border-radius:2px;background:var(--accent);animation:wheel 1.5s ease-in-out infinite;
+}
+@keyframes wheel{0%{opacity:1;top:6px}70%{opacity:0;top:18px}100%{opacity:0}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:translateY(0)}}
+@keyframes dropIn{from{opacity:0;transform:translateY(-40px)}to{opacity:1;transform:translateY(0)}}
+
+/* ===== SECCIONES ===== */
+#portada .block{max-width:var(--maxw);margin:0 auto;padding:100px 24px;}
+#portada .s-eyebrow{font-size:12px;letter-spacing:4px;text-transform:uppercase;color:var(--accent);font-weight:700;}
+#portada .s-title{font-size:clamp(28px,5vw,46px);font-weight:700;margin:14px 0 16px;letter-spacing:-.5px;line-height:1.1;}
+#portada .s-sub{color:var(--text-dim);max-width:640px;font-size:17px;margin:0 auto;}
+#portada .features-head{text-align:center;max-width:700px;margin:0 auto;}
+
+/* ===== TARJETAS DE "CÓMO FUNCIONA" ===== */
+#portada .pasos{display:grid;grid-template-columns:repeat(2,1fr);gap:30px;margin:60px auto 0;max-width:960px;}
+#portada .paso{
+  border:1px solid var(--border);border-radius:16px;background:var(--surface);padding:26px 28px 24px;
+  position:relative;overflow:hidden;transition:transform .3s var(--ease),box-shadow .3s,border-color .3s;
+}
+#portada .paso:hover{transform:translateY(-4px);box-shadow:var(--shadow);border-color:var(--accent-deep);}
+#portada .paso .num{
+  position:absolute;top:16px;right:20px;font-size:11px;letter-spacing:2px;font-weight:700;
+  color:var(--accent);opacity:.7;
+}
+#portada .paso h3{font-size:19px;font-weight:700;margin:0 0 8px;}
+#portada .paso p{color:var(--text-dim);font-size:14.5px;margin:0;}
+#portada .paso .demo{
+  height:132px;margin-bottom:18px;border-radius:10px;background:var(--surface2);
+  border:1px solid var(--border);display:grid;place-items:center;overflow:hidden;
+}
+@media(max-width:760px){#portada .pasos{grid-template-columns:1fr;}}
+
+/* --- mini calendario que se va pintando --- */
+#portada .mini{display:grid;grid-template-columns:repeat(7,15px);gap:5px;}
+#portada .mini i{width:15px;height:15px;border-radius:50%;background:var(--border2);display:block;font-style:normal;}
+#portada .paso:hover .mini i.p{animation:pintar .5s var(--ease) forwards;}
+#portada .paso:hover .mini i.p:nth-child(10){animation-delay:.06s;}
+#portada .paso:hover .mini i.p:nth-child(11){animation-delay:.12s;}
+#portada .paso:hover .mini i.p:nth-child(12){animation-delay:.18s;}
+@keyframes pintar{to{background:var(--accent);transform:scale(1.16);}}
+
+/* --- círculos repartidos entre varias personas --- */
+#portada .repartido{display:flex;gap:14px;align-items:center;}
+#portada .repartido b{width:34px;height:34px;border-radius:50%;display:block;transition:transform .35s var(--ease);}
+#portada .paso:hover .repartido b{transform:translateY(-4px) scale(1.1);}
+#portada .paso:hover .repartido b:nth-child(2){transition-delay:.06s;}
+#portada .paso:hover .repartido b:nth-child(3){transition-delay:.12s;}
+#portada .paso:hover .repartido b:nth-child(4){transition-delay:.18s;}
+
+/* --- tarjetas de horas con semáforo --- */
+#portada .semaforo{display:flex;gap:10px;}
+#portada .semaforo span{
+  width:52px;height:62px;border-radius:8px;border:1px solid var(--border2);
+  border-left:4px solid var(--verde);background:var(--surface);transition:transform .35s var(--ease);
+}
+#portada .semaforo span.a{border-left-color:var(--amarillo);}
+#portada .semaforo span.n{border-left-color:var(--naranja);}
+#portada .semaforo span.r{border-left-color:var(--rojo);}
+#portada .paso:hover .semaforo span{transform:translateY(-5px);}
+#portada .paso:hover .semaforo span.a{transition-delay:.05s;}
+#portada .paso:hover .semaforo span.n{transition-delay:.1s;}
+#portada .paso:hover .semaforo span.r{transition-delay:.15s;}
+
+/* --- filas: solo la tuya se mueve --- */
+#portada .filas{display:flex;flex-direction:column;gap:7px;width:190px;}
+#portada .filas span{
+  height:15px;border-radius:4px;background:var(--border2);
+  transition:background .35s var(--ease),transform .35s var(--ease),opacity .35s var(--ease);
+}
+#portada .filas span.mia{background:var(--accent);}
+#portada .paso:hover .filas span.mia{transform:translateX(9px);}
+#portada .paso:hover .filas span:not(.mia){opacity:.4;}
+
+/* ===== CIERRE ===== */
+#portada .cierre{text-align:center;padding:110px 24px 96px;}
+#portada .cierre h2{font-size:clamp(30px,6vw,64px);font-weight:800;letter-spacing:clamp(2px,.8vw,8px);color:var(--ink);margin:0;}
+#portada .cierre .t2{color:var(--text-dim);font-style:italic;letter-spacing:6px;margin:16px 0 34px;}
+#portada .pie{border-top:1px solid var(--border);padding:30px 40px;text-align:center;color:var(--text-dim);font-size:13px;}
+
+@media(max-width:640px){
+  #portada .top{padding:16px 20px;}
+  #portada .top.scrolled{padding:11px 20px;}
+  #portada .block{padding:70px 20px;}
+}
+
+</style>
+  <style>
+/* ============================================================
+   CALENDARIO DE VACACIONES
+   Los colores salen todos de tema.css (negro con detalles dorados,
+   y una versión clara). Aquí no hay ningún color fijo salvo los de
+   cada compañero, que vienen de la base de datos.
+   ============================================================ */
+body{
+  margin:0;
+  font-family:var(--font);
+  color:var(--text);
+  background:var(--bg);
+  transition:background .5s var(--ease),color .5s var(--ease);
+}
+
+/* ----- Barra superior ----- */
 .app-header{
-  background:var(--azul);
-  color:#fff;
+  background:var(--surface);
+  border-bottom:1px solid var(--border);
+  color:var(--text);
   padding:14px 20px;
   display:flex;
   align-items:center;
   justify-content:space-between;
+  gap:12px;
+  flex-wrap:wrap;
 }
-.app-header .title{font-size:20px;font-weight:600;}
+.app-header .title{font-size:19px;font-weight:700;letter-spacing:.5px;}
+.app-header .title span{color:var(--accent);}
 .mode-badge{
-  font-size:12px;
-  padding:4px 10px;
-  border-radius:20px;
-  background:#5b6b86;
+  font-size:11px;letter-spacing:1px;text-transform:uppercase;font-weight:700;
+  padding:4px 10px;border-radius:20px;
+  background:var(--surface2);border:1px solid var(--border);color:var(--text-dim);
 }
-.mode-badge.shared{background:#3a7d44;}
+.mode-badge.shared{color:var(--accent);border-color:var(--accent-deep);}
 
+/* ----- Pestañas ----- */
 .tabs{
   display:flex;
   gap:4px;
-  background:#e7ebf2;
+  background:var(--surface);
   padding:6px 20px 0;
-  border-bottom:1px solid var(--gris-borde);
+  border-bottom:1px solid var(--border);
   position:relative;
+  flex-wrap:wrap;
 }
 .tab{
   border:none;
   background:transparent;
   padding:10px 18px;
   font-size:14px;
+  font-family:inherit;
   cursor:pointer;
   border-radius:8px 8px 0 0;
-  color:#566;
+  color:var(--text-dim);
 }
-.tab.active{background:#f4f6fa;font-weight:600;color:var(--azul);}
+.tab.active{background:var(--bg);font-weight:600;color:var(--accent);}
 
 .tab-panel{display:none;padding:18px 20px;}
 .tab-panel.active{display:block;}
@@ -76,34 +307,39 @@ body{
 .mes-actual{font-size:18px;font-weight:600;min-width:170px;text-align:center;}
 .spacer{flex:1;}
 
+/* ----- Botones ----- */
 button{font-family:inherit;}
 .nav-btn{
-  width:36px;height:34px;border:1px solid var(--azul);
-  background:var(--amarillo);border-radius:6px;cursor:pointer;font-size:14px;
+  width:36px;height:34px;border:1px solid var(--border2);
+  background:var(--surface2);color:var(--accent);border-radius:6px;cursor:pointer;font-size:14px;
 }
-.nav-btn:hover{filter:brightness(.97);}
+.nav-btn:hover{border-color:var(--accent-deep);}
 .primary-btn{
-  background:var(--azul2);color:#fff;border:none;
+  background:var(--accent);color:#15171a;border:none;font-weight:600;
   padding:9px 16px;border-radius:6px;cursor:pointer;font-size:14px;
 }
-.primary-btn:hover{filter:brightness(1.07);}
+.primary-btn:hover{background:var(--accent-deep);color:#fff;}
 .ghost-btn{
-  background:#fff;border:1px solid var(--gris-borde);
+  background:transparent;border:1px solid var(--border2);color:var(--text);
   padding:8px 14px;border-radius:6px;cursor:pointer;font-size:14px;
 }
-.ghost-btn:hover{background:#f0f3f8;}
+.ghost-btn:hover{border-color:var(--accent);color:var(--accent);}
 .danger-btn{
-  background:#fff;border:1px solid var(--rojo);color:var(--rojo);
+  background:transparent;border:1px solid var(--rojo);color:var(--rojo);
   padding:8px 14px;border-radius:6px;cursor:pointer;font-size:14px;
 }
-.danger-btn:hover{background:#fdecea;}
+.danger-btn:hover{background:var(--rojo-bg);}
+.link-btn{
+  background:none;border:none;padding:0;font:inherit;font-size:12px;
+  color:var(--accent);cursor:pointer;text-decoration:underline;
+}
 
-.grid-wrap{overflow-x:auto;border:1px solid var(--gris-borde);border-radius:8px;background:#fff;}
+.grid-wrap{overflow-x:auto;border:1px solid var(--border);border-radius:8px;background:var(--surface);}
 
 /* ----- Tabla calendario ----- */
-.cal-table{border-collapse:collapse;width:100%;font-size:13px;}
+.cal-table{border-collapse:collapse;width:100%;font-size:13px;background:var(--surface);}
 .cal-table th,.cal-table td{
-  border:1px solid var(--gris-borde);
+  border:1px solid var(--border);
   text-align:center;
   padding:0;
   height:30px;
@@ -114,57 +350,65 @@ button{font-family:inherit;}
   padding:0 10px;
   min-width:140px;
   position:sticky;left:0;
-  background:#fff;
+  background:var(--surface);
   font-weight:600;
   white-space:nowrap;
 }
-.cal-table thead th{background:var(--azul);color:#fff;font-weight:600;}
-.cal-table thead th.dow{font-size:10px;font-weight:400;opacity:.85;}
+.cal-table thead th{background:var(--surface2);color:var(--accent);font-weight:700;}
+.cal-table thead th.persona-col{background:var(--surface2);}
+.cal-table thead th.dow{font-size:10px;font-weight:400;color:var(--text-dim);}
 .cal-table td.cell{cursor:pointer;font-weight:600;}
-.cal-table td.cell:hover{outline:2px solid var(--azul2);outline-offset:-2px;}
+.cal-table td.cell:hover{outline:2px solid var(--accent);outline-offset:-2px;}
 .cal-table td.finde{background:var(--finde);}
-.cal-table td.finde-vac{background:var(--finde-vac);}
 .cal-table td.festivo{background:var(--festivo);}
-.cal-table tr.fuera-row td{background:#f7f9fc;font-style:italic;color:#667;}
-.cal-table tr.fuera-row td.alerta{background:#fde2e1;color:var(--rojo);font-weight:700;font-style:normal;}
+.cal-table tr.fuera-row td{background:var(--surface2);font-style:italic;color:var(--text-dim);}
+.cal-table tr.fuera-row td.alerta{background:var(--rojo-bg);color:var(--rojo);font-weight:700;font-style:normal;}
 .color-dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:7px;vertical-align:middle;}
 
 /* ----- Leyenda ----- */
-.leyenda{margin-top:14px;font-size:13px;display:flex;gap:16px;flex-wrap:wrap;align-items:center;}
+.leyenda{margin-top:14px;font-size:13px;display:flex;gap:16px;flex-wrap:wrap;align-items:center;color:var(--text-dim);}
+.leyenda strong{color:var(--text);}
 .leyenda .lg{display:flex;align-items:center;gap:6px;}
-.leyenda .note{color:#788;font-style:italic;}
-.chip{display:inline-block;width:16px;height:16px;border-radius:4px;border:1px solid #bbb;}
-.chip-x{background:var(--azul2);}
-.chip-m{background:linear-gradient(135deg,var(--azul2) 50%,#fff 50%);}
-.chip-h{background:#ffe08a;}
+.leyenda .note{font-style:italic;}
+.chip{display:inline-block;width:16px;height:16px;border-radius:4px;border:1px solid var(--border2);}
+.chip-x{background:var(--accent);}
+.chip-m{background:linear-gradient(135deg,var(--accent) 50%,var(--surface) 50%);}
+.chip-h{background:var(--amarillo);}
 .chip-finde{background:var(--finde);}
 .chip-festivo{background:var(--festivo);}
 
 /* ----- Resumen ----- */
-.resumen-table{border-collapse:collapse;width:100%;font-size:13px;}
-.resumen-table th,.resumen-table td{border:1px solid var(--gris-borde);padding:6px 8px;text-align:center;}
-.resumen-table th{background:var(--azul);color:#fff;}
+.resumen-table{border-collapse:collapse;width:100%;font-size:13px;background:var(--surface);}
+.resumen-table th,.resumen-table td{border:1px solid var(--border);padding:6px 8px;text-align:center;}
+.resumen-table th{background:var(--surface2);color:var(--accent);}
 .resumen-table td.nombre{text-align:left;font-weight:600;white-space:nowrap;}
-.resumen-table td.sep{background:#eef1f6;}
-.resumen-table tr:nth-child(even) td{background:#fafbfd;}
+.resumen-table td.sep{background:var(--surface2);}
+.resumen-table tr:nth-child(even) td{
+  background:var(--surface2);
+  background:color-mix(in srgb,var(--surface2) 55%,var(--surface));
+}
 .resumen-table td.neg{color:var(--rojo);font-weight:700;}
 .stats{margin-top:16px;display:flex;gap:14px;flex-wrap:wrap;}
-.stat-card{background:#fff;border:1px solid var(--gris-borde);border-radius:10px;padding:14px 18px;min-width:150px;}
-.stat-card .n{font-size:26px;font-weight:700;color:var(--azul);}
-.stat-card .l{font-size:12px;color:#667;}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 18px;min-width:150px;}
+.stat-card .n{font-size:26px;font-weight:700;color:var(--accent);}
+.stat-card .l{font-size:12px;color:var(--text-dim);}
 
 /* ----- Modal ----- */
 .overlay{
-  display:none;position:fixed;inset:0;background:rgba(20,28,40,.45);
+  display:none;position:fixed;inset:0;background:rgba(0,0,0,.62);
   align-items:center;justify-content:center;padding:16px;z-index:50;
 }
 .overlay.open{display:flex;}
-.modal{background:#fff;border-radius:12px;padding:22px;width:380px;max-width:100%;box-shadow:0 12px 40px rgba(0,0,0,.25);}
-.modal h3{margin:0 0 14px;color:var(--azul);}
+.modal{
+  background:var(--surface);border:1px solid var(--border);border-radius:12px;
+  padding:22px;width:380px;max-width:100%;box-shadow:var(--shadow);
+}
+.modal h3{margin:0 0 14px;color:var(--accent);}
 .modal label{display:block;font-size:13px;margin:10px 0 4px;font-weight:600;}
-.modal .muted{font-weight:400;color:#889;font-size:11px;}
-.modal select,.modal input[type=date],.modal input[type=number]{
-  width:100%;padding:8px;border:1px solid var(--gris-borde);border-radius:6px;font-size:14px;
+.modal .muted{font-weight:400;color:var(--text-dim);font-size:11px;}
+.modal select,.modal input[type=date],.modal input[type=number],.modal input[type=password]{
+  width:100%;padding:8px;border:1px solid var(--border2);border-radius:6px;font-size:14px;
+  background:var(--surface2);color:var(--text);font-family:inherit;
 }
 .row2{display:flex;gap:12px;}
 .row2>div{flex:1;}
@@ -174,139 +418,143 @@ button{font-family:inherit;}
 .modal-msg{color:var(--rojo);font-size:13px;min-height:18px;margin-top:8px;}
 .modal-actions{display:flex;align-items:center;gap:8px;margin-top:16px;}
 
-/* ----- Toast ----- */
+/* ----- Aviso flotante ----- */
 .toast{
   position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);
-  background:var(--azul);color:#fff;padding:12px 22px;border-radius:8px;
-  opacity:0;transition:all .3s;z-index:60;font-size:14px;
+  background:var(--accent);color:#15171a;padding:12px 22px;border-radius:8px;
+  opacity:0;transition:all .3s;z-index:60;font-size:14px;font-weight:600;
+  box-shadow:var(--shadow);
 }
 .toast.show{transform:translateX(-50%) translateY(0);opacity:1;}
 
-/* ----- Header derecho ----- */
+/* ----- Lado derecho de la barra ----- */
 .header-right{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
-.user-email{font-size:13px;opacity:.9;}
+.user-email{font-size:13px;color:var(--text-dim);}
 .ghost-btn.sm,.danger-btn.sm{padding:5px 9px;font-size:12px;}
 .primary-btn.full{width:100%;margin-top:6px;}
 
-/* ----- Login ----- */
-.login-screen{position:fixed;inset:0;background:#eef1f7;display:flex;align-items:center;justify-content:center;padding:16px;}
-.login-card{background:#fff;border-radius:14px;padding:28px;width:340px;max-width:100%;box-shadow:0 14px 50px rgba(0,0,0,.15);}
-.login-title{font-size:20px;font-weight:700;color:var(--azul);text-align:center;}
-.login-sub{font-size:13px;color:#667;text-align:center;margin:6px 0 18px;}
+/* ----- Acceso ----- */
+.login-screen{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:16px;z-index:40;}
+.login-card{
+  background:var(--surface);border:1px solid var(--border);border-radius:14px;
+  padding:28px;width:340px;max-width:100%;box-shadow:var(--shadow);
+}
+.login-title{font-size:20px;font-weight:700;color:var(--accent);text-align:center;}
+.login-sub{font-size:13px;color:var(--text-dim);text-align:center;margin:6px 0 18px;}
 .login-card label{display:block;font-size:13px;font-weight:600;margin:10px 0 4px;}
-.login-card input{width:100%;padding:9px;border:1px solid var(--gris-borde);border-radius:6px;font-size:14px;}
-.login-foot{font-size:12px;color:#889;text-align:center;margin:14px 0 0;}
+.login-card input{
+  width:100%;padding:9px;border:1px solid var(--border2);border-radius:6px;font-size:14px;
+  background:var(--surface2);color:var(--text);font-family:inherit;
+}
+.login-foot{font-size:12px;color:var(--text-dim);text-align:center;margin:14px 0 0;}
 
 /* ----- Ajustes ----- */
-.ajustes-block{background:#fff;border:1px solid var(--gris-borde);border-radius:10px;padding:16px 18px;margin-bottom:16px;}
-.ajustes-block h3{margin:0 0 12px;color:var(--azul);}
+.ajustes-block{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px 18px;margin-bottom:16px;}
+.ajustes-block h3{margin:0 0 12px;color:var(--accent);}
 .param-row{display:flex;gap:18px;align-items:flex-end;flex-wrap:wrap;}
 .param-row label{display:flex;flex-direction:column;font-size:13px;font-weight:600;gap:4px;}
-.param-row input{padding:7px;border:1px solid var(--gris-borde);border-radius:6px;width:90px;}
 .cfg-table{border-collapse:collapse;width:100%;font-size:13px;margin-bottom:10px;}
-.cfg-table th,.cfg-table td{border:1px solid var(--gris-borde);padding:6px 8px;text-align:left;}
-.cfg-table th{background:#eef1f6;}
-.cfg-table input{padding:5px;border:1px solid var(--gris-borde);border-radius:5px;}
+.cfg-table th,.cfg-table td{border:1px solid var(--border);padding:6px 8px;text-align:left;}
+.cfg-table th{background:var(--surface2);color:var(--accent);}
 .add-row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
-.add-row input{padding:7px;border:1px solid var(--gris-borde);border-radius:6px;}
 .add-row input[type=text]{min-width:120px;}
-.muted-note{font-size:13px;color:#667;margin:0 0 12px;}
+.param-row input,.cfg-table input,.add-row input,.anio-head select,.dep-box select{
+  background:var(--surface2);color:var(--text);border:1px solid var(--border2);
+  border-radius:6px;padding:7px;font-family:inherit;font-size:13px;
+}
+.param-row input{width:90px;}
+.cfg-table input{padding:5px;border-radius:5px;}
+.cfg-table input:disabled,.cfg-table select:disabled{opacity:.45;cursor:not-allowed;}
+.muted-note{font-size:13px;color:var(--text-dim);margin:0 0 12px;}
 .user-msg{margin-top:12px;font-size:14px;color:var(--rojo);}
-.user-msg.ok{color:#2c6b34;background:#e9f6ec;border:1px solid #bfe3c6;padding:10px 12px;border-radius:8px;}
-.solo-admin{font-size:12px;font-weight:400;color:#8a93a3;}
+.user-msg.ok{color:var(--verde);background:var(--surface2);border:1px solid var(--border2);padding:10px 12px;border-radius:8px;}
+.solo-admin{font-size:12px;font-weight:400;color:var(--text-dim);}
 
-/* ----- Propiedad de filas ----- */
+/* ----- Quién es dueño de cada fila ----- */
 .cal-table td.cell.ro{cursor:default;}
 .cal-table td.cell.ro:hover{outline:none;}
-.cal-table tr.fila-mia td.persona-col{box-shadow:inset 3px 0 0 var(--azul2);}
-.yo{color:var(--azul2);font-weight:700;font-size:11px;}
+.cal-table tr.fila-mia td.persona-col{box-shadow:inset 3px 0 0 var(--accent);background:var(--fila-mia);}
+.yo{color:var(--accent);font-weight:700;font-size:11px;}
 
 /* ----- Vista anual ----- */
 .anio-block{margin-top:24px;}
 .anio-head{display:flex;align-items:center;gap:18px;flex-wrap:wrap;margin-bottom:12px;}
-.anio-head h3{margin:0;color:var(--azul);}
-.anio-head select{padding:6px;border:1px solid var(--gris-borde);border-radius:6px;}
+.anio-head h3{margin:0;color:var(--accent);}
 .anio-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:14px;}
-.mini-mes{border:1px solid var(--gris-borde);border-radius:10px;background:#fff;padding:10px;}
+.mini-mes{border:1px solid var(--border);border-radius:10px;background:var(--surface);padding:10px;}
 .mini-mes h4{margin:0 0 8px;text-align:center;color:#fff;border-radius:6px;padding:5px;font-size:14px;}
 .mini-tabla{border-collapse:collapse;width:100%;table-layout:fixed;}
-.mini-tabla th{font-size:10px;color:#99a;padding:2px 0;font-weight:600;}
+.mini-tabla th{font-size:10px;color:var(--text-dim);padding:2px 0;font-weight:600;}
 .mini-tabla td{text-align:center;font-size:11px;padding:1px 0;height:22px;}
 .mini-tabla td .d{display:flex;align-items:center;justify-content:center;width:21px;height:21px;border-radius:50%;margin:0 auto;}
 .mini-tabla td.festivo .d{background:var(--festivo);}
-.mini-tabla td.finde .d{color:#b3b9c4;}
+.mini-tabla td.finde .d{color:var(--text-dim);opacity:.55;}
 .mini-tabla td.dia-x .d{color:#fff;font-weight:700;}
 .mini-tabla td.dia-m .d{box-shadow:inset 0 0 0 2px currentColor;font-weight:700;}
-.mini-tabla td.dia-h .d{background:#ffe08a;color:#333;font-weight:700;}
-.mini-tabla td.tarde .d{background:#e2e6ec;color:#5b6577;}
+.mini-tabla td.dia-h .d{background:var(--amarillo);color:#15171a;font-weight:700;}
+.mini-tabla td.tarde .d{background:var(--surface2);color:var(--text-dim);box-shadow:inset 0 0 0 1px var(--border2);}
 .mini-tabla td.hoy .d{outline:2px solid var(--rojo);outline-offset:1px;font-weight:700;}
+.anio-nota{font-size:12px;color:var(--text-dim);display:flex;align-items:center;gap:6px;}
 .anio-nota .chip-hoy{display:inline-block;width:12px;height:12px;border-radius:50%;border:2px solid var(--rojo);}
-.anio-nota{font-size:12px;color:#788;display:flex;align-items:center;gap:6px;}
-.anio-nota .chip-tarde{display:inline-block;width:14px;height:14px;border-radius:50%;background:#e2e6ec;border:1px solid #cfd4dd;}
+.anio-nota .chip-tarde{display:inline-block;width:14px;height:14px;border-radius:50%;background:var(--surface2);border:1px solid var(--border2);}
 
-
-/* ----- Selector de departamento (barra superior) ----- */
-.dep-box{display:flex;align-items:center;gap:8px;color:#fff;}
-.dep-box label{font-size:12px;opacity:.85;}
-.dep-box select{
-  padding:6px 10px;border:1px solid #5b6b86;border-radius:6px;
-  background:#3d4a63;color:#fff;font-size:14px;font-family:inherit;cursor:pointer;
-}
+/* ----- Selector de departamento ----- */
+.dep-box{display:flex;align-items:center;gap:8px;}
+.dep-box label{font-size:12px;color:var(--text-dim);}
+.dep-box select{cursor:pointer;font-size:14px;}
 
 /* ----- Etiqueta de turno fijo junto al nombre ----- */
 .etq-turno{
-  font-size:10px;font-weight:600;color:#5b6577;background:#e2e6ec;
-  border-radius:4px;padding:1px 5px;margin-left:4px;vertical-align:middle;
+  font-size:10px;font-weight:600;color:var(--text-dim);background:var(--surface2);
+  border:1px solid var(--border);border-radius:4px;padding:1px 5px;margin-left:4px;vertical-align:middle;
 }
 
 /* ----- Fila de horas disponibles ----- */
-.cal-table tr.horas-row td{background:#f2f6fb;color:#456;font-size:11px;font-weight:600;}
-.cal-table tr.horas-row td.mermado{background:#fff4e0;color:#8a5a00;}
+.cal-table tr.horas-row td{background:var(--surface2);color:var(--text-dim);font-size:11px;font-weight:600;}
+.cal-table tr.horas-row td.mermado{background:var(--amarillo-bg);color:var(--amarillo);}
 
-/* ----- Resumen de horas por semana ----- */
+/* ----- Horas disponibles por semana ----- */
 .horas-semana{margin-top:16px;}
 .hs-head{display:flex;align-items:center;gap:8px;margin:0 0 8px;flex-wrap:wrap;}
-.hs-head h4{margin:0 10px 0 0;color:var(--azul);font-size:14px;}
-.hs-mes{font-size:13px;font-weight:600;color:#5b6577;min-width:110px;text-align:center;}
-.nav-btn.sm{padding:2px 9px;font-size:12px;line-height:1.6;}
+.hs-head h4{margin:0 10px 0 0;color:var(--accent);font-size:14px;}
+.hs-mes{font-size:13px;font-weight:600;color:var(--text-dim);min-width:110px;text-align:center;}
+.nav-btn.sm{width:auto;height:auto;padding:2px 9px;font-size:12px;line-height:1.6;}
 .semana-cards{display:flex;gap:10px;flex-wrap:wrap;}
 .semana-card{
-  background:#fff;border:1px solid var(--gris-borde);border-left:4px solid #3a7d44;
+  background:var(--surface);border:1px solid var(--border);border-left:4px solid var(--verde);
   border-radius:8px;padding:8px 14px;min-width:120px;
 }
 /* Semáforo: 1 fuera amarillo · 2 naranja · 3 o más rojo */
-.semana-card.hs1{border-left-color:#e8b93d;background:#fffbef;}
-.semana-card.hs2{border-left-color:#e8862b;background:#fff5ea;}
-.semana-card.hs3{border-left-color:var(--rojo);background:#fdeeed;}
-.semana-card .sc-dias{font-size:11px;color:#788;}
-.semana-card .sc-horas{font-size:19px;font-weight:700;color:var(--azul);}
-.semana-card .sc-tot{font-size:11px;color:#99a;}
-.semana-card .sc-fuera{font-size:11px;color:#7a8290;margin-top:3px;}
-.semana-card.hs1 .sc-fuera{color:#8a6a10;font-weight:600;}
-.semana-card.hs2 .sc-fuera{color:#9a5210;font-weight:600;}
-.semana-card.hs3 .sc-fuera{color:#a3312d;font-weight:600;}
+.semana-card.hs1{border-left-color:var(--amarillo);background:var(--amarillo-bg);}
+.semana-card.hs2{border-left-color:var(--naranja);background:var(--naranja-bg);}
+.semana-card.hs3{border-left-color:var(--rojo);background:var(--rojo-bg);}
+.semana-card .sc-dias{font-size:11px;color:var(--text-dim);}
+.semana-card .sc-horas{font-size:19px;font-weight:700;color:var(--accent);}
+.semana-card .sc-tot{font-size:11px;color:var(--text-dim);opacity:.8;}
+.semana-card .sc-fuera{font-size:11px;color:var(--text-dim);margin-top:3px;}
+.semana-card.hs1 .sc-fuera{color:var(--amarillo);font-weight:600;}
+.semana-card.hs2 .sc-fuera{color:var(--naranja);font-weight:600;}
+.semana-card.hs3 .sc-fuera{color:var(--rojo);font-weight:600;}
 
 /* ----- Ayuda ----- */
 .ayuda-quien{
-  background:#eef3fb;border:1px solid var(--gris-borde);border-left:4px solid var(--azul2);
+  background:var(--surface);border:1px solid var(--border);border-left:4px solid var(--text-dim);
   border-radius:8px;padding:10px 14px;margin-bottom:16px;font-size:14px;
 }
-.ayuda-quien.admin{background:#fff6e6;border-left-color:#e8a33d;}
+.ayuda-quien.admin{background:var(--accent-soft);border-left-color:var(--accent);}
 .ayuda-sec{margin-bottom:14px;}
 .ayuda-sec:last-child{margin-bottom:0;}
-.ayuda-sec h4{margin:0 0 6px;font-size:14px;color:var(--azul2);}
+.ayuda-sec h4{margin:0 0 6px;font-size:14px;color:var(--accent);}
 .ayuda-sec ul,.ayuda-final{margin:0;padding-left:20px;}
-.ayuda-sec li,.ayuda-final li{font-size:13.5px;line-height:1.65;color:#3a4454;margin-bottom:3px;}
-.ayuda-admin{border-left:4px solid #e8a33d;}
+.ayuda-sec li,.ayuda-final li{font-size:13.5px;line-height:1.65;color:var(--text);margin-bottom:3px;}
+.ayuda-admin{border-left:4px solid var(--accent-deep);}
 #ayudaBox code{
-  background:#eef1f6;border:1px solid var(--gris-borde);border-radius:4px;
-  padding:1px 5px;font-size:12.5px;
+  background:var(--surface2);border:1px solid var(--border2);border-radius:4px;
+  color:var(--accent);padding:1px 5px;font-size:12.5px;
 }
-
 
 /* ============================================================
    ANIMACIONES Y MICRO-INTERACCIONES
-   Se mantiene la estética; solo se suavizan los cambios.
    ============================================================ */
 
 /* ----- Pestañas: barra de acento que se desliza ----- */
@@ -314,28 +562,28 @@ button{font-family:inherit;}
   position:absolute;
   top:6px; left:0;
   height:3px; width:0;
-  background:var(--azul2);
+  background:var(--accent);
   border-radius:3px;
   pointer-events:none;
-  transition:transform .32s cubic-bezier(.4,0,.2,1), width .32s cubic-bezier(.4,0,.2,1);
+  transition:transform .32s var(--ease), width .32s var(--ease);
 }
 .tab{transition:color .2s ease, background .2s ease;}
-.tab:hover:not(.active){background:rgba(255,255,255,.55);color:var(--azul);}
+.tab:hover:not(.active){background:var(--surface2);color:var(--text);}
 
 /* ----- Los paneles entran con un pequeño desplazamiento ----- */
 @keyframes panelIn{
   from{opacity:0; transform:translateY(8px);}
   to  {opacity:1; transform:none;}
 }
-.tab-panel.active{animation:panelIn .28s cubic-bezier(.4,0,.2,1);}
+.tab-panel.active{animation:panelIn .28s var(--ease);}
 
 /* ----- Botones: elevación al pasar y hundido al pulsar ----- */
 .primary-btn,.ghost-btn,.danger-btn,.nav-btn{
-  transition:transform .12s ease, box-shadow .2s ease, background .2s ease, filter .2s ease;
+  transition:transform .12s ease, box-shadow .2s ease, background .2s ease, color .2s ease, border-color .2s ease;
 }
-.primary-btn:hover{transform:translateY(-1px);box-shadow:0 4px 12px rgba(68,114,196,.32);}
-.ghost-btn:hover,.nav-btn:hover{transform:translateY(-1px);box-shadow:0 3px 8px rgba(47,59,82,.12);}
-.danger-btn:hover{transform:translateY(-1px);box-shadow:0 3px 8px rgba(217,83,79,.2);}
+.primary-btn:hover{transform:translateY(-1px);box-shadow:0 4px 14px rgba(0,0,0,.35);}
+.ghost-btn:hover,.nav-btn:hover{transform:translateY(-1px);box-shadow:0 3px 10px rgba(0,0,0,.25);}
+.danger-btn:hover{transform:translateY(-1px);}
 .primary-btn:active,.ghost-btn:active,.danger-btn:active,.nav-btn:active{
   transform:translateY(0) scale(.97);box-shadow:none;
 }
@@ -355,39 +603,35 @@ button{font-family:inherit;}
   from{opacity:0; transform:translateY(10px);}
   to  {opacity:1; transform:none;}
 }
-.semana-card,.stat-card{animation:cardIn .34s cubic-bezier(.4,0,.2,1) backwards;}
+.semana-card,.stat-card{animation:cardIn .34s var(--ease) backwards;}
 .semana-card:nth-child(2),.stat-card:nth-child(2){animation-delay:.05s;}
 .semana-card:nth-child(3),.stat-card:nth-child(3){animation-delay:.10s;}
 .semana-card:nth-child(4),.stat-card:nth-child(4){animation-delay:.15s;}
 .semana-card:nth-child(5){animation-delay:.20s;}
 .semana-card:nth-child(6){animation-delay:.25s;}
-.semana-card,.stat-card{transition:transform .18s ease, box-shadow .18s ease;}
-.semana-card:hover,.stat-card:hover{transform:translateY(-2px);box-shadow:0 6px 16px rgba(47,59,82,.10);}
+.semana-card,.stat-card{transition:transform .18s ease, box-shadow .18s ease, border-color .18s ease;}
+.semana-card:hover,.stat-card:hover{transform:translateY(-2px);box-shadow:var(--shadow);}
 
 /* ----- Calendario: realce suave ----- */
 .cal-table td.cell{transition:outline-color .15s ease, filter .15s ease;}
-.cal-table td.cell:not(.ro):hover{filter:brightness(1.06);}
-.cal-table tbody tr:hover td.persona-col{background:#f5f8fd;}
+.cal-table td.cell:not(.ro):hover{filter:brightness(1.12);}
+.cal-table tbody tr:hover td.persona-col{background:var(--surface2);}
 
 /* ----- Vista anual: los meses entran suave y los días reaccionan ----- */
-.mini-mes{animation:cardIn .3s ease backwards;transition:box-shadow .2s ease;}
-.mini-mes:hover{box-shadow:0 4px 14px rgba(47,59,82,.09);}
+.mini-mes{animation:cardIn .3s ease backwards;transition:box-shadow .2s ease,border-color .2s ease;}
+.mini-mes:hover{box-shadow:var(--shadow);border-color:var(--border2);}
 .mini-tabla td .d{transition:transform .14s ease;}
 .mini-tabla td[data-fecha]:hover .d{transform:scale(1.18);}
 
 /* ----- Entrada de la pantalla de acceso ----- */
 .login-card{animation:modalIn .32s cubic-bezier(.34,1.28,.64,1);}
 
-/* ----- Selector de departamento ----- */
-.dep-box select{transition:background .2s ease, border-color .2s ease;}
-.dep-box select:hover{background:#4a5a78;border-color:#7d8ba6;}
-
 /* ----- Campos de formulario ----- */
 input,select,textarea{transition:border-color .18s ease, box-shadow .18s ease;}
-input:focus,select:focus{border-color:var(--azul2);box-shadow:0 0 0 3px rgba(68,114,196,.15);outline:none;}
+input:focus,select:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft);outline:none;}
 
 /* ----- Accesibilidad: foco visible al navegar con el teclado ----- */
-:focus-visible{outline:2px solid var(--azul2);outline-offset:2px;}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
 
 /* ----- Respeta a quien tenga las animaciones desactivadas en su sistema ----- */
 @media (prefers-reduced-motion: reduce){
@@ -403,6 +647,95 @@ input:focus,select:focus{border-color:var(--azul2);box-shadow:0 0 0 3px rgba(68,
 </head>
 <body>
 
+  <!-- ===================== PORTADA ===================== -->
+  <div id="portada">
+    <div class="top" id="header">
+      <div class="logo">VACA<em>CIONES</em></div>
+      <div class="nav-right">
+        <button class="toggle" id="toggle" title="Tema claro / oscuro" aria-label="Cambiar tema"><span class="knob"></span></button>
+        <button class="btn btn-primary entrar-app">Entrar →</button>
+      </div>
+    </div>
+
+    <div class="hero">
+      <canvas id="heroWood"></canvas>
+      <canvas id="heroFx"></canvas>
+      <div class="eyebrow">Grupo KIMAK · Calendario del equipo</div>
+      <h1>VACACIONES</h1>
+      <div class="tagline">quién falta y cuándo</div>
+      <div class="cta-row">
+        <button class="btn btn-primary entrar-app">Entrar en la app →</button>
+        <a href="#como-funciona" class="btn btn-ghost">Cómo funciona</a>
+      </div>
+      <div class="cut-hint">Pasa por encima de la madera y córtala</div>
+      <div class="scroll-cue"><div class="mouse"></div>DESLIZA</div>
+    </div>
+
+    <section class="block" id="como-funciona">
+      <div class="features-head reveal">
+        <div class="s-eyebrow">Cómo funciona</div>
+        <div class="s-title">El calendario del departamento, sin macros ni permisos raros</div>
+        <p class="s-sub">Lo mismo que había en el Excel, pero abierto en el navegador, con la cuenta de cada uno y sin que nadie pueda tocar los días de otro.</p>
+      </div>
+
+      <div class="pasos">
+        <div class="paso reveal">
+          <span class="num">01</span>
+          <div class="demo">
+            <div class="mini">
+              <i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+              <i></i><i class="p"></i><i class="p"></i><i class="p"></i><i class="p"></i><i></i><i></i>
+              <i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+            </div>
+          </div>
+          <h3>Pide tus días en dos clics</h3>
+          <p>Doble clic en un día, o el botón de pedir vacaciones para marcar un rango entero. Días completos, medios días y horas sueltas. Los findes y los festivos se saltan solos.</p>
+        </div>
+
+        <div class="paso reveal">
+          <span class="num">02</span>
+          <div class="demo">
+            <div class="repartido">
+              <b style="background:#d6a06b"></b>
+              <b style="background:linear-gradient(90deg,#d6a06b 0 50%,#7aa7c7 50% 100%)"></b>
+              <b style="background:conic-gradient(#d6a06b 0deg 120deg,#7aa7c7 120deg 240deg,#a3c48b 240deg 360deg)"></b>
+              <b style="background:conic-gradient(#d6a06b 0deg 90deg,#7aa7c7 90deg 180deg,#a3c48b 180deg 270deg,#c98ba8 270deg 360deg)"></b>
+            </div>
+          </div>
+          <h3>Todo el equipo de un vistazo</h3>
+          <p>En la vista anual, cada día se reparte entre los colores de quienes están fuera: uno, dos, tres o cuatro. Pasas el cursor y te dice los nombres.</p>
+        </div>
+
+        <div class="paso reveal">
+          <span class="num">03</span>
+          <div class="demo">
+            <div class="semaforo"><span></span><span class="a"></span><span class="n"></span><span class="r"></span></div>
+          </div>
+          <h3>Las horas que quedan cada semana</h3>
+          <p>Semanas completas de lunes a viernes, aunque cambien de mes, con las horas reales según el horario de cada uno. Amarillo si falta una persona, naranja si faltan dos y rojo si faltan tres.</p>
+        </div>
+
+        <div class="paso reveal">
+          <span class="num">04</span>
+          <div class="demo">
+            <div class="filas"><span></span><span class="mia"></span><span></span><span></span></div>
+          </div>
+          <h3>Cada uno toca solo lo suyo</h3>
+          <p>Puedes ver el calendario entero, pero solo cambiar tus días y tus datos. El permiso está en la base de datos, no en la pantalla, así que no hay forma de saltárselo. Y todo queda registrado.</p>
+        </div>
+      </div>
+    </section>
+
+    <div class="cierre">
+      <div class="reveal">
+        <h2>VACACIONES</h2>
+        <div class="t2">quién falta y cuándo</div>
+        <button class="btn btn-primary entrar-app">Entrar en la app →</button>
+      </div>
+    </div>
+    <div class="pie">Calendario de vacaciones · Aplicación interna de Grupo KIMAK</div>
+  </div>
+
   <!-- ===================== LOGIN ===================== -->
   <div id="loginScreen" class="login-screen" style="display:none;">
     <form class="login-card" id="loginForm">
@@ -415,6 +748,7 @@ input:focus,select:focus{border-color:var(--azul2);box-shadow:0 0 0 3px rgba(68,
       <div id="loginMsg" class="modal-msg"></div>
       <button type="submit" class="primary-btn full">Entrar</button>
       <p class="login-foot">¿No tienes cuenta? Pídesela al administrador.</p>
+      <p class="login-foot"><button type="button" class="link-btn" id="volverPortada">← Volver a la portada</button></p>
     </form>
   </div>
 
@@ -429,6 +763,8 @@ input:focus,select:focus{border-color:var(--azul2);box-shadow:0 0 0 3px rgba(68,
       <div class="header-right">
         <span class="mode-badge" id="modeBadge"></span>
         <span class="user-email" id="userEmail"></span>
+        <button class="toggle" id="toggleApp" title="Tema claro / oscuro" aria-label="Cambiar tema"><span class="knob"></span></button>
+        <button id="btnPortada" class="ghost-btn sm" title="Volver a la portada">Portada</button>
         <button id="btnPass" class="ghost-btn sm">Cambiar contraseña</button>
         <button id="btnLogout" class="ghost-btn sm" style="display:none;">Salir</button>
       </div>
@@ -606,6 +942,359 @@ input:focus,select:focus{border-color:var(--azul2);box-shadow:0 0 0 3px rgba(68,
   <div id="toast" class="toast"></div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>
+// ============================================================
+//  PORTADA — tema, corte de la madera y aparición al bajar
+//  El motor de corte es el de la landing de KLIN. La única diferencia
+//  es que aquí la madera se dibuja por código (no hay foto que cargar),
+//  y que también funciona con el dedo, no solo con el ratón.
+// ============================================================
+
+/* ====== TEMA ====== */
+// Hay un interruptor en la portada y otro dentro de la aplicación: los dos
+// llaman aquí, así que el tema elegido vale para las dos pantallas.
+(function(){
+  const root = document.documentElement;
+  const SUN  = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5L19 19M19 5l-1.5 1.5M6.5 17.5L5 19"/></svg>';
+  const MOON = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>';
+  let guardado = null;
+  try { guardado = localStorage.getItem("vac-theme"); } catch(e){}
+  if (guardado === "light" || guardado === "dark") root.setAttribute("data-theme", guardado);
+  function pintar(){
+    const icono = root.getAttribute("data-theme")==="dark" ? MOON : SUN;
+    document.querySelectorAll(".toggle .knob").forEach(k => k.innerHTML = icono);
+  }
+  function alternar(){
+    const n = root.getAttribute("data-theme")==="dark" ? "light" : "dark";
+    root.setAttribute("data-theme", n);
+    try { localStorage.setItem("vac-theme", n); } catch(e){}
+    pintar();
+  }
+  window.Tema = { pintar, alternar };
+  document.querySelectorAll(".toggle").forEach(t => t.onclick = alternar);
+  pintar();
+  const header = document.getElementById("header");
+  if (header) addEventListener("scroll", () => header.classList.toggle("scrolled", scrollY>30), {passive:true});
+})();
+
+/* ====== HÉROE · tablón de madera que se corta al pasar por encima ====== */
+(function(){
+  const cv = document.getElementById("heroFx"), wcv = document.getElementById("heroWood");
+  if (!cv || !wcv) return;
+  const ctx = cv.getContext("2d"), wctx = wcv.getContext("2d");
+  const hero = document.querySelector(".hero");
+  // si el navegador no da lienzo, la portada se queda sin madera pero funciona
+  if (!ctx || !wctx || !hero) return;
+  let sh = [], falling = [];
+  const ri  = (a,b) => Math.random()*(b-a)+a;
+  const rii = (a,b) => Math.floor(ri(a,b+1));
+
+  // ---------- la madera, dibujada a mano en un lienzo aparte ----------
+  // Se hace una sola vez y se guarda: de ahí se recortan luego los trozos que caen.
+  const WW = 1600, WH = 500;               // proporción del tablón (ancho x alto)
+  const wood = document.createElement("canvas");
+  wood.width = WW; wood.height = WH;
+  (function pintarTablon(){
+    const g = wood.getContext("2d");
+    const TABLAS = 4, alto = WH/TABLAS;
+    const bases = ["#8a5e36","#7c5226","#946535","#6e4a26"];
+    for (let t=0; t<TABLAS; t++){
+      const y0 = t*alto;
+      // fondo de la tabla, con un degradado suave de lado a lado
+      const lg = g.createLinearGradient(0, y0, WW, y0+alto);
+      lg.addColorStop(0, bases[t % bases.length]);
+      lg.addColorStop(.5, "#9c6b3a");
+      lg.addColorStop(1, bases[(t+2) % bases.length]);
+      g.fillStyle = lg; g.fillRect(0, y0, WW, alto);
+      // veta: líneas onduladas que recorren la tabla
+      const vetas = 26 + Math.floor(Math.random()*10);
+      for (let v=0; v<vetas; v++){
+        const y = y0 + (v+.5)*(alto/vetas);
+        const amp = 2 + Math.random()*7, per = 180 + Math.random()*320, des = Math.random()*6.28;
+        g.beginPath();
+        for (let x=0; x<=WW; x+=8){
+          const yy = y + Math.sin(x/per + des)*amp;
+          x ? g.lineTo(x, yy) : g.moveTo(x, yy);
+        }
+        g.strokeStyle = Math.random() < .5 ? "rgba(70,44,20,.30)" : "rgba(214,175,124,.20)";
+        g.lineWidth = .6 + Math.random()*1.5;
+        g.stroke();
+      }
+      // algún nudo suelto
+      for (let k=0, n=1+Math.floor(Math.random()*2); k<n; k++){
+        const cx = 120 + Math.random()*(WW-240), cy = y0 + alto*(.3+Math.random()*.4);
+        const rx = 12 + Math.random()*16, ry = rx*(.55+Math.random()*.3);
+        for (let a=6; a>=1; a--){
+          g.beginPath();
+          g.ellipse(cx, cy, rx*a/6, ry*a/6, Math.random()*.6, 0, 6.283);
+          g.strokeStyle = "rgba(58,36,16," + (.16+a*.06) + ")";
+          g.lineWidth = 1.4; g.stroke();
+        }
+      }
+      // junta entre tablas
+      g.fillStyle = "rgba(35,21,9,.55)"; g.fillRect(0, y0+alto-3, WW, 3);
+      g.fillStyle = "rgba(226,192,146,.16)"; g.fillRect(0, y0, WW, 1.5);
+    }
+    // sombra por abajo, para que el canto no quede plano
+    const vg = g.createLinearGradient(0, WH*.72, 0, WH);
+    vg.addColorStop(0, "rgba(0,0,0,0)"); vg.addColorStop(1, "rgba(0,0,0,.35)");
+    g.fillStyle = vg; g.fillRect(0, WH*.72, WW, WH*.28);
+  })();
+
+  // Si algún día se sube la foto de madera original (IMG/madera3.js define
+  // window.WOOD_SRC), se usa esa en su lugar y todo lo demás sigue igual.
+  let woodOK = true;
+  if (window.WOOD_SRC){
+    const img = new Image();
+    img.onload = () => {
+      wood.width = img.width; wood.height = img.height;
+      wood.getContext("2d").drawImage(img, 0, 0);
+      resize();
+    };
+    img.src = window.WOOD_SRC;
+  }
+
+  let cv0 = {ox:0, oy:0, s:1};
+  // CELL = rejilla invisible (detección); RC = grosor visible de la línea.
+  // RM (corte en la rejilla) debe IGUALAR a RC: si la rejilla corta menos que lo
+  // que se borra, quedan celdas "fantasma" que impiden separar el trozo.
+  const CELL = 4, RC = 6.5, RM = 6.5;
+  let cols = 0, rows = 0, mask = null, lab = null, dirty = false, lastDetach = 0;
+
+  // la madera va SOLO en la franja de arriba: a todo el ancho y con su proporción real
+  function paintWood(){
+    const W = wcv.width;
+    cv0 = {ox:0, oy:0, s:W/wood.width};
+    wctx.clearRect(0, 0, wcv.width, wcv.height);
+    wctx.globalAlpha = 1;
+    wctx.drawImage(wood, 0, 0, wood.width*cv0.s, wood.height*cv0.s);
+  }
+  // la rejilla se construye desde el alfa: solo hay "madera" donde el píxel es opaco
+  function buildMask(){
+    cols = Math.ceil(wcv.width/CELL); rows = Math.ceil(wcv.height/CELL);
+    mask = new Uint8Array(cols*rows); lab = new Int32Array(cols*rows);
+    if (!woodOK) return;
+    const W = wcv.width, H = wcv.height;
+    let img = null;
+    try { img = wctx.getImageData(0, 0, W, H).data; } catch(e){ img = null; }
+    if (img){
+      for (let r=0; r<rows; r++){
+        const py = Math.min(H-1, r*CELL+(CELL>>1));
+        for (let c=0; c<cols; c++){
+          const pxx = Math.min(W-1, c*CELL+(CELL>>1));
+          if (img[(py*W+pxx)*4+3] > 40) mask[r*cols+c] = 1;
+        }
+      }
+    } else {
+      const bandBottom = wood.height*cv0.s;   // reserva mínima si getImageData fallara
+      for (let r=0; r<rows && r*CELL<=bandBottom; r++)
+        for (let c=0; c<cols; c++) mask[r*cols+c] = 1;
+    }
+    // empuja el contenido del héroe por debajo de los tablones
+    let lastWoodRow = 0;
+    for (let r=rows-1; r>=0; r--){
+      const base = r*cols; let any = false;
+      for (let c=0; c<cols; c++){ if (mask[base+c]){ any = true; break; } }
+      if (any){ lastWoodRow = r; break; }
+    }
+    hero.style.paddingTop = ((lastWoodRow+1)*CELL + 48) + "px";
+  }
+  function resize(){
+    const r = hero.getBoundingClientRect();
+    cv.width = r.width; cv.height = r.height;
+    wcv.width = r.width; wcv.height = r.height;
+    paintWood(); buildMask();
+  }
+  resize();
+  addEventListener("resize", resize);
+
+  const wl = ["#efe0c4","#e7cfa3","#dcbf92","#e0c8a0","#f0e3c8"];  // luz de la viruta
+  const wd = ["#a9762f","#8a5e36","#6e4a26","#9c6b3a","#7c5226"];  // sombra/borde
+  // 6 diseños de viruta distintos que se van alternando
+  const TPL = [
+    ()=>{const s=22,tn=ri(1.2,2.1),r0=ri(7,12),p=[];for(let i=0;i<=s;i++){const t=i/s,a=tn*6.283*t,r=r0*(1-0.55*t);p.push([Math.cos(a)*r,Math.sin(a)*r]);}return{pts:p,w:ri(3,5)};},
+    ()=>{const s=12,r=ri(8,14),p=[];for(let i=0;i<=s;i++){const a=Math.PI*(i/s)-Math.PI/2;p.push([Math.cos(a)*r,Math.sin(a)*r]);}return{pts:p,w:ri(4,7)};},
+    ()=>{const s=12,r=ri(10,18),sp=ri(1.6,2.4),p=[];for(let i=0;i<=s;i++){const a=sp*(i/s)-sp/2;p.push([Math.cos(a)*r,Math.sin(a)*r]);}return{pts:p,w:ri(4,7)};},
+    ()=>{const s=16,L=ri(26,42),am=ri(5,10),p=[];for(let i=0;i<=s;i++){const t=i/s;p.push([(t-.5)*L,Math.sin(t*6.283)*am]);}return{pts:p,w:ri(3,6)};},
+    ()=>{const s=16,L=ri(32,50),am=ri(2,5),p=[];for(let i=0;i<=s;i++){const t=i/s;p.push([(t-.5)*L,Math.sin(t*Math.PI*1.2)*am]);}return{pts:p,w:ri(3,5)};},
+    ()=>{const s=8,L=ri(12,20),b=ri(.4,1)*(Math.random()<.5?-1:1),p=[];let a=-b/2,x=0,y=0,st=L/s;for(let i=0;i<=s;i++){p.push([x,y]);x+=Math.cos(a)*st;y+=Math.sin(a)*st;a+=b/s;}return{pts:p,w:ri(6,10)};}
+  ];
+  let ti = 0;
+  function make(){
+    const t = TPL[ti++ % TPL.length](); const pts = t.pts;
+    let cx=0, cy=0; for (const p of pts){ cx+=p[0]; cy+=p[1]; } cx/=pts.length; cy/=pts.length;
+    const sc = ri(0.8,1.6);
+    for (const p of pts){ p[0]=(p[0]-cx)*sc; p[1]=(p[1]-cy)*sc; }
+    return {pts, w:t.w*sc, cLight:wl[rii(0,wl.length-1)], cDark:wd[rii(0,wd.length-1)]};
+  }
+  // marca en la rejilla las celdas dentro del radio RM (no dibuja nada)
+  function markMask(x,y){
+    const cmin=Math.max(0,Math.floor((x-RM)/CELL)), cmax=Math.min(cols-1,Math.floor((x+RM)/CELL));
+    const rmin=Math.max(0,Math.floor((y-RM)/CELL)), rmax=Math.min(rows-1,Math.floor((y+RM)/CELL));
+    const R2 = RM*RM;
+    for (let cc=cmin; cc<=cmax; cc++) for (let rr=rmin; rr<=rmax; rr++){
+      const dx=(cc+0.5)*CELL-x, dy=(rr+0.5)*CELL-y;
+      if (dx*dx+dy*dy<=R2) mask[rr*cols+cc]=0;
+    }
+  }
+  // ¿queda madera en este punto? (consulta la rejilla SIN modificarla)
+  function woodAt(x,y){
+    if (!mask) return false;
+    const c = Math.floor(x/CELL), r = Math.floor(y/CELL);
+    if (c<0||r<0||c>=cols||r>=rows) return false;
+    return mask[r*cols+c] === 1;
+  }
+  let px=0, py=0, has=false;
+  // pointermove vale para el ratón y también para el dedo
+  addEventListener("pointermove", e => {
+    const r = hero.getBoundingClientRect();
+    const x = e.clientX-r.left, y = e.clientY-r.top;
+    if (x<0||y<0||x>r.width||y>r.height){ has=false; return; }
+    const vmx = has ? x-px : 0, vmy = has ? y-py : 0;
+    // se comprueba ANTES de cortar: solo salen virutas si aquí todavía había madera
+    const cutting = woodOK && woodAt(x,y);
+    if (woodOK){
+      wctx.save(); wctx.globalCompositeOperation = "destination-out";
+      if (has){
+        const d = Math.hypot(x-px,y-py), steps = Math.max(1,Math.ceil(d/3));
+        for (let i=1; i<=steps; i++) markMask(px+(x-px)*i/steps, py+(y-py)*i/steps);
+        wctx.lineWidth = 2*RC; wctx.lineCap = "round"; wctx.lineJoin = "round";
+        wctx.beginPath(); wctx.moveTo(px,py); wctx.lineTo(x,y); wctx.stroke();
+      } else {
+        markMask(x,y); wctx.beginPath(); wctx.arc(x,y,RC,0,6.283); wctx.fill();
+      }
+      wctx.restore(); dirty = true;
+    }
+    px=x; py=y; has=true;
+    if (cutting){
+      const speed = Math.min(12, Math.hypot(vmx,vmy)); const n = 1+Math.round(speed/3);
+      for (let i=0; i<n; i++){
+        const s = make();
+        s.x = x+ri(-7,7); s.y = y+ri(-5,5);
+        s.vx = ri(-1.7,1.7)-vmx*0.05; s.vy = ri(-2.8,-0.3);
+        s.rot = ri(0,6.28); s.vrot = ri(-0.3,0.3);
+        s.alpha = ri(0.72,0.96); s.t = 0; s.ttl = rii(80,150);
+        sh.push(s);
+      }
+    }
+  }, {passive:true});
+
+  function draw(s, fade){
+    const pts = s.pts, n = pts.length, segs = n-1;
+    ctx.save(); ctx.globalAlpha = Math.max(0, s.alpha*fade);
+    ctx.translate(s.x, s.y); ctx.rotate(s.rot);
+    const top = [], bot = [];
+    for (let i=0; i<n; i++){
+      const a = pts[Math.max(0,i-1)], b = pts[Math.min(n-1,i+1)];
+      const dx=b[0]-a[0], dy=b[1]-a[1], L=Math.hypot(dx,dy)||1;
+      const nx=-dy/L, ny=dx/L;
+      const hw = s.w*Math.sin(Math.PI*i/segs)/2+0.5;
+      top.push([pts[i][0]+nx*hw, pts[i][1]+ny*hw]);
+      bot.push([pts[i][0]-nx*hw, pts[i][1]-ny*hw]);
+    }
+    ctx.beginPath(); ctx.moveTo(top[0][0], top[0][1]);
+    for (let i=1; i<n; i++) ctx.lineTo(top[i][0], top[i][1]);
+    for (let i=n-1; i>=0; i--) ctx.lineTo(bot[i][0], bot[i][1]);
+    ctx.closePath();
+    const g = ctx.createLinearGradient(0,-s.w,0,s.w);
+    g.addColorStop(0, s.cLight); g.addColorStop(0.5, s.cLight); g.addColorStop(1, s.cDark);
+    ctx.fillStyle = g; ctx.fill();
+    ctx.globalAlpha = Math.max(0, s.alpha*fade*0.4);
+    ctx.strokeStyle = s.cDark; ctx.lineWidth = 0.6; ctx.stroke();
+    ctx.restore();
+  }
+  // convierte una pieza separada en trozo que cae (con su textura)
+  function makeFalling(comp){
+    if (comp.length < 3){
+      for (const k of comp){ const c=k%cols, r=(k/cols)|0; mask[k]=0; wctx.clearRect(c*CELL-2, r*CELL-2, CELL+4, CELL+4); }
+      return;
+    }
+    let minc=1e9, minr=1e9, maxc=-1, maxr=-1;
+    for (const k of comp){ const c=k%cols, r=(k/cols)|0; if(c<minc)minc=c; if(r<minr)minr=r; if(c>maxc)maxc=c; if(r>maxr)maxr=r; }
+    const bx=minc*CELL, by=minr*CELL, bw=(maxc-minc+1)*CELL, bh=(maxr-minr+1)*CELL;
+    const mk = document.createElement("canvas"); mk.width=bw; mk.height=bh;
+    const mc = mk.getContext("2d"); mc.fillStyle = "#000";
+    for (const k of comp){ const c=k%cols, r=(k/cols)|0; mc.fillRect((c-minc)*CELL, (r-minr)*CELL, CELL, CELL); }
+    const off = document.createElement("canvas"); off.width=bw; off.height=bh;
+    const o = off.getContext("2d");
+    o.drawImage(wood, cv0.ox-bx, cv0.oy-by, wood.width*cv0.s, wood.height*cv0.s);
+    o.globalCompositeOperation = "destination-in"; o.filter = "blur(1.4px)"; o.drawImage(mk,0,0); o.filter = "none";
+    for (const k of comp) mask[k] = 0;
+    // borra del fondo la forma del trozo, dilatada unos px para arrastrar el borde suavizado
+    wctx.save(); wctx.globalCompositeOperation = "destination-out";
+    const M = 2;
+    for (const d of [[0,0],[M,0],[-M,0],[0,M],[0,-M],[M,M],[-M,-M],[M,-M],[-M,M]]) wctx.drawImage(mk, bx+d[0], by+d[1]);
+    wctx.restore();
+    const big = bw*bh > 90000;   // trozos enormes: sin sombra para no penalizar cada frame
+    falling.push({img:off, x:bx, y:by, vx:ri(-0.4,0.4), vy:ri(0.2,0.8), rot:0, vrot:ri(-0.035,0.035), t:0, ttl:200, big});
+  }
+  // detecta piezas de madera ya separadas del bloque principal
+  function detach(){
+    lab.fill(-1); const comps = [];
+    for (let i=0; i<mask.length; i++){
+      if (mask[i]===1 && lab[i]===-1){
+        const cells = []; const st = [i]; lab[i] = comps.length;
+        while (st.length){
+          const k = st.pop(); cells.push(k);
+          const c = k%cols, r = (k/cols)|0;
+          if (c>0){ const j=k-1; if(mask[j]===1&&lab[j]===-1){lab[j]=comps.length;st.push(j);} }
+          if (c<cols-1){ const j=k+1; if(mask[j]===1&&lab[j]===-1){lab[j]=comps.length;st.push(j);} }
+          if (r>0){ const j=k-cols; if(mask[j]===1&&lab[j]===-1){lab[j]=comps.length;st.push(j);} }
+          if (r<rows-1){ const j=k+cols; if(mask[j]===1&&lab[j]===-1){lab[j]=comps.length;st.push(j);} }
+        }
+        comps.push(cells);
+      }
+    }
+    if (comps.length <= 1) return;
+    let big = 0;
+    for (let i=1; i<comps.length; i++) if (comps[i].length > comps[big].length) big = i;
+    for (let i=0; i<comps.length; i++) if (i !== big) makeFalling(comps[i]);
+  }
+  function loop(){
+    if (dirty){ const now = performance.now(); if (now-lastDetach > 40){ detach(); dirty = false; lastDetach = now; } }
+    ctx.clearRect(0, 0, cv.width, cv.height);
+    const fk = [];
+    for (const p of falling){
+      if (p.t > p.ttl) continue;
+      p.vy += 0.16; p.x += p.vx; p.y += p.vy; p.rot += p.vrot;
+      const life = p.t/p.ttl;
+      ctx.save(); ctx.globalAlpha = life<0.2 ? 1 : Math.max(0, 1-(life-0.2)/0.8);
+      ctx.translate(p.x+p.img.width/2, p.y+p.img.height/2); ctx.rotate(p.rot);
+      if (!p.big){ ctx.shadowColor = "rgba(0,0,0,.35)"; ctx.shadowBlur = 6; ctx.shadowOffsetY = 3; }
+      ctx.drawImage(p.img, -p.img.width/2, -p.img.height/2);
+      ctx.restore(); p.t++; fk.push(p);
+    }
+    falling = fk;
+    const sk = [];
+    for (const s of sh){
+      if (s.t > s.ttl) continue;
+      s.vy += 0.12; s.x += s.vx; s.y += s.vy; s.vx *= 0.99; s.rot += s.vrot;
+      const fade = s.t<8 ? s.t/8 : 1-((s.t-8)/(s.ttl-8));
+      draw(s, fade); s.t++; sk.push(s);
+    }
+    sh = sk;
+    requestAnimationFrame(loop);
+  }
+  loop();
+})();
+
+/* ====== APARECER AL BAJAR ====== */
+(function(){
+  const els = document.querySelectorAll(".reveal");
+  if (!els.length) return;
+  if (!("IntersectionObserver" in window)){ els.forEach(e => e.classList.add("in")); return; }
+  const io = new IntersectionObserver(es => {
+    es.forEach((en,i) => {
+      if (!en.isIntersecting) return;
+      en.target.style.transitionDelay = (i%4*.08)+"s";
+      en.target.classList.add("in");
+      io.unobserve(en.target);
+    });
+  }, {threshold:.18});
+  els.forEach(el => io.observe(el));
+})();
+
+</script>
   <script>
 // ============================================================
 //  CONFIGURACIÓN DE CONEXIÓN
@@ -1063,18 +1752,42 @@ async function init(){
     Store.usaSupabase ? "Modo compartido" : "Modo local (prueba)";
   if (Store.usaSupabase) document.getElementById("modeBadge").classList.add("shared");
 
+  mostrarVista("portada");
   state.user = await Store.getUser();
   Store.onAuthChange(async u => { state.user = u; await routeAuth(); });
   initEventos();
   await routeAuth();
 }
 
+// ---------- las tres pantallas: portada, login y aplicación ----------
+// Al abrir la web siempre se ve la portada. Desde ahí, "Entrar en la app"
+// lleva al login si aún no has entrado, o directo al calendario si ya lo estás.
+let vista = "portada";
+function mostrarVista(v){
+  vista = v;
+  document.getElementById("portada").style.display      = v==="portada" ? "block" : "none";
+  document.getElementById("loginScreen").style.display  = v==="login"   ? "flex"  : "none";
+  document.getElementById("appRoot").style.display      = v==="app"     ? "block" : "none";
+  try { window.scrollTo(0,0); } catch(e){}
+  // los lienzos de la portada y la barra de las pestañas se miden al mostrarse
+  window.dispatchEvent(new Event("resize"));
+}
+const necesitaLogin = () => Store.usaSupabase && !state.user;
+function entrarEnLaApp(){
+  if (necesitaLogin()){ mostrarVista("login"); return; }
+  mostrarVista("app");
+}
+
 async function routeAuth(){
-  const necesitaLogin = Store.usaSupabase && !state.user;
-  document.getElementById("loginScreen").style.display = necesitaLogin ? "flex" : "none";
-  document.getElementById("appRoot").style.display     = necesitaLogin ? "none" : "block";
-  if (necesitaLogin) return;
+  if (necesitaLogin()){
+    // sesión cerrada (o caducada): se vuelve a la portada
+    if (vista !== "portada") mostrarVista("portada");
+    return;
+  }
+  // Ya hay sesión: se cargan los datos aunque todavía se esté viendo la portada,
+  // así al pulsar "Entrar en la app" el calendario aparece al instante.
   await arrancarApp();
+  if (vista === "login") mostrarVista("app");
 }
 
 let arrancada = false;
@@ -1840,6 +2553,13 @@ function toast(msg){
 //  EVENTOS
 // ============================================================
 function initEventos(){
+  // portada <-> aplicación
+  document.querySelectorAll(".entrar-app").forEach(b => b.onclick = entrarEnLaApp);
+  const volver = document.getElementById("volverPortada");
+  if (volver) volver.onclick = () => mostrarVista("portada");
+  const btnPortada = document.getElementById("btnPortada");
+  if (btnPortada) btnPortada.onclick = () => mostrarVista("portada");
+
   // login
   document.getElementById("loginForm").addEventListener("submit", async e => {
     e.preventDefault();

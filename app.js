@@ -142,18 +142,42 @@ async function init(){
     Store.usaSupabase ? "Modo compartido" : "Modo local (prueba)";
   if (Store.usaSupabase) document.getElementById("modeBadge").classList.add("shared");
 
+  mostrarVista("portada");
   state.user = await Store.getUser();
   Store.onAuthChange(async u => { state.user = u; await routeAuth(); });
   initEventos();
   await routeAuth();
 }
 
+// ---------- las tres pantallas: portada, login y aplicación ----------
+// Al abrir la web siempre se ve la portada. Desde ahí, "Entrar en la app"
+// lleva al login si aún no has entrado, o directo al calendario si ya lo estás.
+let vista = "portada";
+function mostrarVista(v){
+  vista = v;
+  document.getElementById("portada").style.display      = v==="portada" ? "block" : "none";
+  document.getElementById("loginScreen").style.display  = v==="login"   ? "flex"  : "none";
+  document.getElementById("appRoot").style.display      = v==="app"     ? "block" : "none";
+  try { window.scrollTo(0,0); } catch(e){}
+  // los lienzos de la portada y la barra de las pestañas se miden al mostrarse
+  window.dispatchEvent(new Event("resize"));
+}
+const necesitaLogin = () => Store.usaSupabase && !state.user;
+function entrarEnLaApp(){
+  if (necesitaLogin()){ mostrarVista("login"); return; }
+  mostrarVista("app");
+}
+
 async function routeAuth(){
-  const necesitaLogin = Store.usaSupabase && !state.user;
-  document.getElementById("loginScreen").style.display = necesitaLogin ? "flex" : "none";
-  document.getElementById("appRoot").style.display     = necesitaLogin ? "none" : "block";
-  if (necesitaLogin) return;
+  if (necesitaLogin()){
+    // sesión cerrada (o caducada): se vuelve a la portada
+    if (vista !== "portada") mostrarVista("portada");
+    return;
+  }
+  // Ya hay sesión: se cargan los datos aunque todavía se esté viendo la portada,
+  // así al pulsar "Entrar en la app" el calendario aparece al instante.
   await arrancarApp();
+  if (vista === "login") mostrarVista("app");
 }
 
 let arrancada = false;
@@ -919,6 +943,13 @@ function toast(msg){
 //  EVENTOS
 // ============================================================
 function initEventos(){
+  // portada <-> aplicación
+  document.querySelectorAll(".entrar-app").forEach(b => b.onclick = entrarEnLaApp);
+  const volver = document.getElementById("volverPortada");
+  if (volver) volver.onclick = () => mostrarVista("portada");
+  const btnPortada = document.getElementById("btnPortada");
+  if (btnPortada) btnPortada.onclick = () => mostrarVista("portada");
+
   // login
   document.getElementById("loginForm").addEventListener("submit", async e => {
     e.preventDefault();

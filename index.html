@@ -1,15 +1,106 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="es" data-theme="dark">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <!-- Capa extra de seguridad: el navegador solo ejecuta scripts de esta web y
        de Supabase, y solo permite conexiones a Supabase. Bloquea inyecciones. -->
   <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; connect-src https://*.supabase.co wss://*.supabase.co; img-src 'self' data:; font-src 'self'; form-action 'none'; base-uri 'none'; frame-ancestors 'none'" />
-  <title>Calendario de Vacaciones</title>
-  <link rel="stylesheet" href="styles.css?v=10" />
+  <title>Vacaciones · Grupo KIMAK</title>
+  <link rel="stylesheet" href="tema.css?v=11" />
+  <link rel="stylesheet" href="landing.css?v=11" />
+  <link rel="stylesheet" href="styles.css?v=11" />
 </head>
 <body>
+
+  <!-- ===================== PORTADA ===================== -->
+  <div id="portada">
+    <div class="top" id="header">
+      <div class="logo">VACA<em>CIONES</em></div>
+      <div class="nav-right">
+        <button class="toggle" id="toggle" title="Tema claro / oscuro" aria-label="Cambiar tema"><span class="knob"></span></button>
+        <button class="btn btn-primary entrar-app">Entrar →</button>
+      </div>
+    </div>
+
+    <div class="hero">
+      <canvas id="heroWood"></canvas>
+      <canvas id="heroFx"></canvas>
+      <div class="eyebrow">Grupo KIMAK · Calendario del equipo</div>
+      <h1>VACACIONES</h1>
+      <div class="tagline">quién falta y cuándo</div>
+      <div class="cta-row">
+        <button class="btn btn-primary entrar-app">Entrar en la app →</button>
+        <a href="#como-funciona" class="btn btn-ghost">Cómo funciona</a>
+      </div>
+      <div class="cut-hint">Pasa por encima de la madera y córtala</div>
+      <div class="scroll-cue"><div class="mouse"></div>DESLIZA</div>
+    </div>
+
+    <section class="block" id="como-funciona">
+      <div class="features-head reveal">
+        <div class="s-eyebrow">Cómo funciona</div>
+        <div class="s-title">El calendario del departamento, sin macros ni permisos raros</div>
+        <p class="s-sub">Lo mismo que había en el Excel, pero abierto en el navegador, con la cuenta de cada uno y sin que nadie pueda tocar los días de otro.</p>
+      </div>
+
+      <div class="pasos">
+        <div class="paso reveal">
+          <span class="num">01</span>
+          <div class="demo">
+            <div class="mini">
+              <i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+              <i></i><i class="p"></i><i class="p"></i><i class="p"></i><i class="p"></i><i></i><i></i>
+              <i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+            </div>
+          </div>
+          <h3>Pide tus días en dos clics</h3>
+          <p>Doble clic en un día, o el botón de pedir vacaciones para marcar un rango entero. Días completos, medios días y horas sueltas. Los findes y los festivos se saltan solos.</p>
+        </div>
+
+        <div class="paso reveal">
+          <span class="num">02</span>
+          <div class="demo">
+            <div class="repartido">
+              <b style="background:#d6a06b"></b>
+              <b style="background:linear-gradient(90deg,#d6a06b 0 50%,#7aa7c7 50% 100%)"></b>
+              <b style="background:conic-gradient(#d6a06b 0deg 120deg,#7aa7c7 120deg 240deg,#a3c48b 240deg 360deg)"></b>
+              <b style="background:conic-gradient(#d6a06b 0deg 90deg,#7aa7c7 90deg 180deg,#a3c48b 180deg 270deg,#c98ba8 270deg 360deg)"></b>
+            </div>
+          </div>
+          <h3>Todo el equipo de un vistazo</h3>
+          <p>En la vista anual, cada día se reparte entre los colores de quienes están fuera: uno, dos, tres o cuatro. Pasas el cursor y te dice los nombres.</p>
+        </div>
+
+        <div class="paso reveal">
+          <span class="num">03</span>
+          <div class="demo">
+            <div class="semaforo"><span></span><span class="a"></span><span class="n"></span><span class="r"></span></div>
+          </div>
+          <h3>Las horas que quedan cada semana</h3>
+          <p>Semanas completas de lunes a viernes, aunque cambien de mes, con las horas reales según el horario de cada uno. Amarillo si falta una persona, naranja si faltan dos y rojo si faltan tres.</p>
+        </div>
+
+        <div class="paso reveal">
+          <span class="num">04</span>
+          <div class="demo">
+            <div class="filas"><span></span><span class="mia"></span><span></span><span></span></div>
+          </div>
+          <h3>Cada uno toca solo lo suyo</h3>
+          <p>Puedes ver el calendario entero, pero solo cambiar tus días y tus datos. El permiso está en la base de datos, no en la pantalla, así que no hay forma de saltárselo. Y todo queda registrado.</p>
+        </div>
+      </div>
+    </section>
+
+    <div class="cierre">
+      <div class="reveal">
+        <h2>VACACIONES</h2>
+        <div class="t2">quién falta y cuándo</div>
+        <button class="btn btn-primary entrar-app">Entrar en la app →</button>
+      </div>
+    </div>
+    <div class="pie">Calendario de vacaciones · Aplicación interna de Grupo KIMAK</div>
+  </div>
 
   <!-- ===================== LOGIN ===================== -->
   <div id="loginScreen" class="login-screen" style="display:none;">
@@ -23,6 +114,7 @@
       <div id="loginMsg" class="modal-msg"></div>
       <button type="submit" class="primary-btn full">Entrar</button>
       <p class="login-foot">¿No tienes cuenta? Pídesela al administrador.</p>
+      <p class="login-foot"><button type="button" class="link-btn" id="volverPortada">← Volver a la portada</button></p>
     </form>
   </div>
 
@@ -37,6 +129,8 @@
       <div class="header-right">
         <span class="mode-badge" id="modeBadge"></span>
         <span class="user-email" id="userEmail"></span>
+        <button class="toggle" id="toggleApp" title="Tema claro / oscuro" aria-label="Cambiar tema"><span class="knob"></span></button>
+        <button id="btnPortada" class="ghost-btn sm" title="Volver a la portada">Portada</button>
         <button id="btnPass" class="ghost-btn sm">Cambiar contraseña</button>
         <button id="btnLogout" class="ghost-btn sm" style="display:none;">Salir</button>
       </div>
@@ -214,8 +308,9 @@
   <div id="toast" class="toast"></div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="config.js?v=10"></script>
-  <script src="store.js?v=10"></script>
-  <script src="app.js?v=10"></script>
+  <script src="landing.js?v=11"></script>
+  <script src="config.js?v=11"></script>
+  <script src="store.js?v=11"></script>
+  <script src="app.js?v=11"></script>
 </body>
 </html>
