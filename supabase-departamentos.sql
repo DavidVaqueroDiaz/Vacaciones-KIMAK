@@ -29,7 +29,7 @@ create policy "dep_write"  on departamentos for all    to authenticated
 
 insert into departamentos (nombre, max_fuera, orden) values
   ('Programación', 2, 1),
-  ('Oficina Intermedia', 1, 2)
+  ('Oficina Intermedia', 3, 2)
 on conflict (nombre) do nothing;
 
 -- ------------------------------------------------------------
@@ -74,8 +74,9 @@ create policy "marcas_select" on marcas for select to authenticated
        and p.departamento_id = public.mi_departamento()));
 
 -- ------------------------------------------------------------
--- 5) Las columnas nuevas también son cosa del administrador
---    (se amplía el disparador que ya teníamos)
+-- 5) Qué puede cambiar cada uno en su propia ficha:
+--      SÍ: nombre, color, horario, días anuales y bolsa de horas
+--      NO: email, turno, departamento y fechas de alta/baja (solo el admin)
 -- ------------------------------------------------------------
 create or replace function public.personas_before_update()
 returns trigger language plpgsql security definer set search_path = public as $$
@@ -85,11 +86,8 @@ begin
   end if;
   if new.email           is distinct from old.email
      or new.turno           is distinct from old.turno
-     or new.dias_anuales    is distinct from old.dias_anuales
-     or new.bolsa_horas     is distinct from old.bolsa_horas
      or new.orden           is distinct from old.orden
      or new.departamento_id is distinct from old.departamento_id
-     or new.horario         is distinct from old.horario
      or new.fecha_alta      is distinct from old.fecha_alta
      or new.fecha_baja      is distinct from old.fecha_baja then
     raise exception 'Solo un administrador puede modificar estos datos';
@@ -102,3 +100,21 @@ drop trigger if exists trg_personas_before_update on personas;
 create trigger trg_personas_before_update
 before update on personas
 for each row execute function public.personas_before_update();
+
+-- ------------------------------------------------------------
+-- 6) ALTA DEL EQUIPO DE OFICINA INTERMEDIA
+--    (los correos coinciden con las cuentas ya creadas en Authentication)
+-- ------------------------------------------------------------
+insert into personas (nombre, email, color, dias_anuales, bolsa_horas, orden, turno, horario, departamento_id)
+select v.nombre, v.email, v.color, v.dias, v.horas, v.orden, v.turno, v.horario,
+       (select id from departamentos where nombre = 'Oficina Intermedia')
+  from (values
+    ('Mónica',  'monica@vacaciones.com',  '17BECF', 22, 20, 8,  'tarde',   '8,8,8,8,8'),
+    ('Iago',    'iago@vacaciones.com',    '9467BD', 22, 20, 9,  'impar',   '8,8,8,8,8'),
+    ('Joaquín', 'joaquin@vacaciones.com', '8C564B', 22, 20, 10, 'partido', '8.5,8.5,8.5,8.5,6'),
+    ('Camilo',  'camilo@vacaciones.com',  'E377C2', 22, 20, 11, 'partido', '8.5,8.5,8.5,8.5,6')
+  ) as v(nombre,email,color,dias,horas,orden,turno,horario)
+ where not exists (select 1 from personas p where lower(p.email) = lower(v.email));
+
+-- Camilo, administrador
+insert into admins (email) values ('camilo@vacaciones.com') on conflict do nothing;

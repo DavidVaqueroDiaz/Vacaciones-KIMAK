@@ -983,7 +983,7 @@ function esTardeTurno(persona, semana){
   return false;   // los turnos fijos (mañana/tarde/partido) no se sombrean
 }
 // Etiqueta corta del turno fijo, para mostrarla junto al nombre
-const ETIQUETAS_TURNO = { manana:"Mañana", tarde:"Tarde", partido:"Partido" };
+const ETIQUETAS_TURNO = { manana:"(mañana)", tarde:"(tarde)", partido:"(j.partida)" };
 function etiquetaTurno(p){
   const t = (p && p.turno ? String(p.turno) : "").trim().toLowerCase();
   return ETIQUETAS_TURNO[t] || "";
@@ -1285,7 +1285,7 @@ function renderAjustes(){
   if (elMax && dep) elMax.value = dep.max_fuera != null ? dep.max_fuera : state.ajustes.max_fuera;
   document.getElementById("notaPersonas").textContent = isAdm
     ? "Solo se muestran los compañeros de " + (dep ? dep.nombre : "este departamento") + ". El email vincula a cada uno con su cuenta y el horario son las horas de lunes a viernes."
-    : "Solo puedes editar tu propia fila.";
+    : "Solo puedes editar tu propia fila, incluido tu horario (las horas de lunes a viernes).";
 
   // personas
   const TURNOS = [
@@ -1310,7 +1310,7 @@ function renderAjustes(){
       <td><input class="e-nombre" value="${esc(p.nombre)}" ${dis}></td>
       <td><input class="e-email" value="${esc(p.email||"")}" placeholder="email@..." style="width:160px" ${emailDis}></td>
       <td><select class="e-turno" ${emailDis}>${opts}</select></td>
-      <td><input class="e-horario" value="${esc(p.horario||"")}" placeholder="8,8,8,8,8" style="width:120px" ${emailDis}></td>
+      <td><input class="e-horario" value="${esc(p.horario||"")}" placeholder="8,8,8,8,8" style="width:120px" ${dis}></td>
       <td><input class="e-color" value="${esc(p.color)}" maxlength="6" style="width:80px" ${dis}> <span class="color-dot" style="background:#${hex(p.color)}"></span></td>
       <td><input class="e-dias" type="number" value="${p.dias_anuales}" style="width:70px" ${dis}></td>
       <td><input class="e-horas" type="number" value="${p.bolsa_horas}" style="width:70px" ${dis}></td>
@@ -1357,10 +1357,11 @@ async function guardarPersona(id){
     dias_anuales: +tr.querySelector(".e-dias").value,
     bolsa_horas:  +tr.querySelector(".e-horas").value
   };
+  // El horario lo ajusta cada uno en su propia fila; el email y el turno, solo el admin
+  fields.horario = tr.querySelector(".e-horario").value.trim();
   if (esAdmin()){
-    fields.email   = tr.querySelector(".e-email").value.trim();
-    fields.turno   = tr.querySelector(".e-turno").value;
-    fields.horario = tr.querySelector(".e-horario").value.trim();
+    fields.email = tr.querySelector(".e-email").value.trim();
+    fields.turno = tr.querySelector(".e-turno").value;
   }
   if (!fields.nombre){ toast("El nombre no puede estar vacío"); return; }
   await Store.updatePersona(id, fields);
