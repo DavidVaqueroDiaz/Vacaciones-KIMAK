@@ -189,6 +189,7 @@ async function arrancarApp(){
   document.getElementById("btnLogout").style.display = Store.usaSupabase ? "inline-block" : "none";
   document.getElementById("btnPass").style.display   = Store.usaSupabase ? "inline-block" : "none";
   document.getElementById("tabUsuarios").style.display = esAdmin() ? "inline-block" : "none";
+  moverIndicador();
   await recargar();
   if (!arrancada){
     arrancada = true;
@@ -239,6 +240,15 @@ function pintarSelectorDep(){
   const d = depById(state.depActual);
   const et = document.getElementById("depNombre");
   if (et) et.textContent = d ? d.nombre : "";
+}
+
+// Desliza la barra de acento hasta la pestaña activa
+function moverIndicador(){
+  const ind = document.getElementById("tabIndicator");
+  const activa = document.querySelector(".tab.active");
+  if (!ind || !activa) return;
+  ind.style.width = activa.offsetWidth + "px";
+  ind.style.transform = "translateX(" + activa.offsetLeft + "px)";
 }
 
 function renderTodo(){
@@ -803,6 +813,7 @@ function initEventos(){
   document.getElementById("btnNext").onclick = () => { mesActual=(mesActual+1)%12; renderCalendario(); };
   document.getElementById("btnHoy").onclick = () => { const h=new Date(); mesActual=(h.getFullYear()===state.ajustes.year)?h.getMonth():0; renderCalendario(); };
   document.getElementById("anioPersona").onchange = renderAnio;
+  window.addEventListener("resize", moverIndicador);
 
   // cambiar de departamento
   const depSel = document.getElementById("depSelector");
@@ -841,6 +852,7 @@ function initEventos(){
       document.querySelectorAll(".tab-panel").forEach(p=>p.classList.remove("active"));
       tab.classList.add("active");
       document.getElementById("tab-"+tab.dataset.tab).classList.add("active");
+      moverIndicador();
       if (tab.dataset.tab==="resumen") renderResumen();
       if (tab.dataset.tab==="ajustes") renderAjustes();
       if (tab.dataset.tab==="usuarios") renderUsuarios();
