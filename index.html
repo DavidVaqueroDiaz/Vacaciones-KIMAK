@@ -7,14 +7,18 @@
        de Supabase, y solo permite conexiones a Supabase. Bloquea inyecciones. -->
   <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; connect-src https://*.supabase.co wss://*.supabase.co; img-src 'self' data:; font-src 'self'; form-action 'none'; base-uri 'none'; frame-ancestors 'none'" />
   <title>Vacaciones · Grupo KIMAK</title>
-  <link rel="stylesheet" href="tema.css?v=15" />
-  <link rel="stylesheet" href="landing.css?v=15" />
-  <link rel="stylesheet" href="styles.css?v=15" />
+  <link rel="stylesheet" href="tema.css?v=16" />
+  <link rel="stylesheet" href="landing.css?v=16" />
+  <link rel="stylesheet" href="styles.css?v=16" />
 </head>
 <body>
 
   <!-- ===================== PORTADA ===================== -->
   <div id="portada">
+    <!-- Las virutas y los trozos de tablón caen por TODA la portada hasta
+         amontonarse abajo, así que este lienzo va fuera del héroe y fijo a
+         la pantalla, no pegado a la primera sección. -->
+    <canvas id="heroFx"></canvas>
     <div class="top" id="header">
       <div class="logo">VACA<em>CIONES</em></div>
       <div class="nav-right">
@@ -28,7 +32,6 @@
            capa, la madera se pinta encima y lo tapa. Solo aparece al cortar. -->
       <div class="credito" id="credito">Creado por <b>David Vaquero Díaz</b></div>
       <canvas id="heroWood"></canvas>
-      <canvas id="heroFx"></canvas>
       <div class="eyebrow">Grupo KIMAK · Calendario del equipo</div>
       <h1>VACACIONES</h1>
       <div class="tagline">quién falta y cuándo</div>
@@ -36,7 +39,6 @@
         <button class="btn btn-primary entrar-app">Entrar en la app →</button>
         <a href="#como-funciona" class="btn btn-ghost">Cómo funciona</a>
       </div>
-      <div class="cut-hint">Pasa por encima de la madera y córtala · hay algo debajo</div>
       <div class="scroll-cue"><div class="mouse"></div>DESLIZA</div>
     </div>
 
@@ -315,9 +317,9 @@
        Si este archivo no está, la portada usa IMG/madera3.png y, si tampoco,
        un tablón dibujado por código. Nunca se queda en blanco. -->
   <script src="IMG/madera3.js"></script>
-  <script src="landing.js?v=15"></script>
-  <script src="config.js?v=15"></script>
-  <script src="store.js?v=15"></script>
-  <script src="app.js?v=15"></script>
+  <script src="landing.js?v=16"></script>
+  <script src="config.js?v=16"></script>
+  <script src="store.js?v=16"></script>
+  <script src="app.js?v=16"></script>
 </body>
 </html>

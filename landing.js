@@ -175,14 +175,56 @@
     const credito = document.getElementById("credito");
     if (credito) credito.style.top = Math.round(finMadera*0.72) + "px";
   }
+  // ---------- el serrín cae por toda la portada y se amonta abajo ----------
+  // Las partículas se guardan en coordenadas de PÁGINA. El lienzo va fijo a la
+  // pantalla, así que al pintar se les resta el scroll. Lo que ya ha caído no
+  // se sigue simulando: se estampa de una vez en el lienzo del montón.
+  const ALTO_PILA = 300, COL = 6, VMAX = 12, MAX_VIRUTAS = 700;
+  const pilaCv = document.createElement("canvas");
+  let pctx = null, altura = null, colsPila = 0, hayPila = false;
+  let sueloY = 0, heroOff = {x:0, y:0};
+
+  function medirPortada(){
+    const r = hero.getBoundingClientRect();
+    heroOff = {x: r.left + scrollX, y: r.top + scrollY};
+    sueloY = Math.max(
+      document.documentElement.scrollHeight,
+      document.body ? document.body.scrollHeight : 0
+    ) - 4;
+  }
+  function prepararPila(){
+    pilaCv.width = Math.max(1, innerWidth); pilaCv.height = ALTO_PILA;
+    pctx = pilaCv.getContext("2d");
+    colsPila = Math.ceil(pilaCv.width/COL) + 1;
+    altura = new Float32Array(colsPila);
+    hayPila = false;
+  }
+  const techoPila = () => sueloY - ALTO_PILA;
+  function alturaEn(px){
+    if (!altura) return 0;
+    const c = Math.max(0, Math.min(colsPila-1, Math.floor(px/COL)));
+    return altura[c];
+  }
+  // al posarse algo, el montón sube en esa zona: así crece en cerros y no plano
+  function subirPila(px, cuanto, ancho){
+    if (!altura) return;
+    const c0 = Math.floor((px-ancho/2)/COL), c1 = Math.floor((px+ancho/2)/COL);
+    for (let c=c0; c<=c1; c++){
+      if (c<0 || c>=colsPila) continue;
+      altura[c] = Math.min(ALTO_PILA-12, altura[c] + cuanto);
+    }
+  }
+
   function resize(){
     const r = hero.getBoundingClientRect();
-    cv.width = r.width; cv.height = r.height;
-    wcv.width = r.width; wcv.height = r.height;
+    cv.width = innerWidth; cv.height = innerHeight;   // el de las virutas: la pantalla
+    wcv.width = r.width;   wcv.height = r.height;     // el de la madera: el héroe
     paintWood(); buildMask();
+    prepararPila(); medirPortada();
   }
   resize();
   addEventListener("resize", resize);
+  addEventListener("scroll", medirPortada, {passive:true});
 
   const wl = ["#efe0c4","#e7cfa3","#dcbf92","#e0c8a0","#f0e3c8"];  // luz de la viruta
   const wd = ["#a9762f","#8a5e36","#6e4a26","#9c6b3a","#7c5226"];  // sombra/borde
@@ -246,19 +288,25 @@
       const speed = Math.min(12, Math.hypot(vmx,vmy)); const n = 1+Math.round(speed/3);
       for (let i=0; i<n; i++){
         const s = make();
-        s.x = x+ri(-7,7); s.y = y+ri(-5,5);
+        // en coordenadas de página, para que sigan cayendo aunque bajes
+        s.x = heroOff.x + x + ri(-7,7); s.y = heroOff.y + y + ri(-5,5);
         s.vx = ri(-1.7,1.7)-vmx*0.05; s.vy = ri(-2.8,-0.3);
         s.rot = ri(0,6.28); s.vrot = ri(-0.3,0.3);
-        s.alpha = ri(0.72,0.96); s.t = 0; s.ttl = rii(80,150);
+        s.alpha = ri(0.72,0.96); s.t = 0;
         sh.push(s);
       }
+      if (sh.length > MAX_VIRUTAS) sh.splice(0, sh.length - MAX_VIRUTAS);
     }
   }, {passive:true});
 
-  function draw(s, fade){
+  // Pinta una viruta. Se le dice en qué lienzo y con qué desplazamiento, porque
+  // se usa dos veces: mientras cae (en pantalla) y al posarse (en el montón).
+  function draw(s, fade, destino, offX, offY){
+    const g = destino || ctx;
+    offX = offX || 0; offY = offY || 0;
     const pts = s.pts, n = pts.length, segs = n-1;
-    ctx.save(); ctx.globalAlpha = Math.max(0, s.alpha*fade);
-    ctx.translate(s.x, s.y); ctx.rotate(s.rot);
+    g.save(); g.globalAlpha = Math.max(0, s.alpha*fade);
+    g.translate(s.x - offX, s.y - offY); g.rotate(s.rot);
     const top = [], bot = [];
     for (let i=0; i<n; i++){
       const a = pts[Math.max(0,i-1)], b = pts[Math.min(n-1,i+1)];
@@ -268,16 +316,16 @@
       top.push([pts[i][0]+nx*hw, pts[i][1]+ny*hw]);
       bot.push([pts[i][0]-nx*hw, pts[i][1]-ny*hw]);
     }
-    ctx.beginPath(); ctx.moveTo(top[0][0], top[0][1]);
-    for (let i=1; i<n; i++) ctx.lineTo(top[i][0], top[i][1]);
-    for (let i=n-1; i>=0; i--) ctx.lineTo(bot[i][0], bot[i][1]);
-    ctx.closePath();
-    const g = ctx.createLinearGradient(0,-s.w,0,s.w);
-    g.addColorStop(0, s.cLight); g.addColorStop(0.5, s.cLight); g.addColorStop(1, s.cDark);
-    ctx.fillStyle = g; ctx.fill();
-    ctx.globalAlpha = Math.max(0, s.alpha*fade*0.4);
-    ctx.strokeStyle = s.cDark; ctx.lineWidth = 0.6; ctx.stroke();
-    ctx.restore();
+    g.beginPath(); g.moveTo(top[0][0], top[0][1]);
+    for (let i=1; i<n; i++) g.lineTo(top[i][0], top[i][1]);
+    for (let i=n-1; i>=0; i--) g.lineTo(bot[i][0], bot[i][1]);
+    g.closePath();
+    const grad = g.createLinearGradient(0,-s.w,0,s.w);
+    grad.addColorStop(0, s.cLight); grad.addColorStop(0.5, s.cLight); grad.addColorStop(1, s.cDark);
+    g.fillStyle = grad; g.fill();
+    g.globalAlpha = Math.max(0, s.alpha*fade*0.4);
+    g.strokeStyle = s.cDark; g.lineWidth = 0.6; g.stroke();
+    g.restore();
   }
   // convierte una pieza separada en trozo que cae (con su textura)
   function makeFalling(comp){
@@ -302,7 +350,9 @@
     for (const d of [[0,0],[M,0],[-M,0],[0,M],[0,-M],[M,M],[-M,-M],[M,-M],[-M,M]]) wctx.drawImage(mk, bx+d[0], by+d[1]);
     wctx.restore();
     const big = bw*bh > 90000;   // trozos enormes: sin sombra para no penalizar cada frame
-    falling.push({img:off, x:bx, y:by, vx:ri(-0.4,0.4), vy:ri(0.2,0.8), rot:0, vrot:ri(-0.035,0.035), t:0, ttl:200, big});
+    // en coordenadas de página, igual que las virutas
+    falling.push({img:off, x:heroOff.x+bx, y:heroOff.y+by, vx:ri(-0.4,0.4), vy:ri(0.2,0.8),
+                  rot:0, vrot:ri(-0.035,0.035), big});
   }
   // detecta piezas de madera ya separadas del bloque principal
   function detach(){
@@ -326,27 +376,60 @@
     for (let i=1; i<comps.length; i++) if (comps[i].length > comps[big].length) big = i;
     for (let i=0; i<comps.length; i++) if (i !== big) makeFalling(comps[i]);
   }
+  // Al tocar el montón, el trozo se estampa en el lienzo de la pila y deja de
+  // simularse: a partir de ahí es un dibujo fijo, no cuesta nada por frame.
+  function posarTrozo(p, tope){
+    if (pctx){
+      const cx = p.x + p.img.width/2, cy = tope - p.img.height/2;
+      pctx.save();
+      pctx.translate(cx, cy - techoPila()); pctx.rotate(p.rot);
+      pctx.drawImage(p.img, -p.img.width/2, -p.img.height/2);
+      pctx.restore();
+      subirPila(cx, p.img.height*0.45, p.img.width);
+      hayPila = true;
+    }
+  }
+  function posarViruta(s, tope){
+    if (pctx){
+      s.y = tope;
+      draw(s, 1, pctx, 0, techoPila());
+      subirPila(s.x, 1.1, Math.max(6, s.w*2));
+      hayPila = true;
+    }
+  }
+
   function loop(){
     if (dirty){ const now = performance.now(); if (now-lastDetach > 40){ detach(); dirty = false; lastDetach = now; } }
     ctx.clearRect(0, 0, cv.width, cv.height);
+    const sx = scrollX, sy = scrollY;
+    // el montón acumulado, pintado de una sola pasada
+    if (hayPila) ctx.drawImage(pilaCv, -sx, techoPila() - sy);
+
     const fk = [];
     for (const p of falling){
-      if (p.t > p.ttl) continue;
-      p.vy += 0.16; p.x += p.vx; p.y += p.vy; p.rot += p.vrot;
-      const life = p.t/p.ttl;
-      ctx.save(); ctx.globalAlpha = life<0.2 ? 1 : Math.max(0, 1-(life-0.2)/0.8);
-      ctx.translate(p.x+p.img.width/2, p.y+p.img.height/2); ctx.rotate(p.rot);
-      if (!p.big){ ctx.shadowColor = "rgba(0,0,0,.35)"; ctx.shadowBlur = 6; ctx.shadowOffsetY = 3; }
-      ctx.drawImage(p.img, -p.img.width/2, -p.img.height/2);
-      ctx.restore(); p.t++; fk.push(p);
+      p.vy = Math.min(p.vy + 0.16, VMAX); p.x += p.vx; p.y += p.vy; p.rot += p.vrot;
+      const tope = sueloY - alturaEn(p.x + p.img.width/2);
+      if (p.y + p.img.height >= tope){ posarTrozo(p, tope); continue; }
+      const vy = p.y - sy;
+      if (vy > -p.img.height-40 && vy < cv.height+40){   // fuera de pantalla no se pinta
+        ctx.save();
+        ctx.translate(p.x+p.img.width/2-sx, p.y+p.img.height/2-sy); ctx.rotate(p.rot);
+        if (!p.big){ ctx.shadowColor = "rgba(0,0,0,.35)"; ctx.shadowBlur = 6; ctx.shadowOffsetY = 3; }
+        ctx.drawImage(p.img, -p.img.width/2, -p.img.height/2);
+        ctx.restore();
+      }
+      fk.push(p);
     }
     falling = fk;
+
     const sk = [];
     for (const s of sh){
-      if (s.t > s.ttl) continue;
-      s.vy += 0.12; s.x += s.vx; s.y += s.vy; s.vx *= 0.99; s.rot += s.vrot;
-      const fade = s.t<8 ? s.t/8 : 1-((s.t-8)/(s.ttl-8));
-      draw(s, fade); s.t++; sk.push(s);
+      s.vy = Math.min(s.vy + 0.12, VMAX); s.x += s.vx; s.y += s.vy; s.vx *= 0.99; s.rot += s.vrot;
+      const tope = sueloY - alturaEn(s.x);
+      if (s.y >= tope){ posarViruta(s, tope); continue; }
+      const vy = s.y - sy;
+      if (vy > -60 && vy < cv.height+60) draw(s, s.t<8 ? s.t/8 : 1, ctx, sx, sy);
+      s.t++; sk.push(s);
     }
     sh = sk;
     requestAnimationFrame(loop);
